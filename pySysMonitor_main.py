@@ -67,9 +67,19 @@ class pySysMonitor_gui(tk.Frame):
                 else:
                     aLabel = tk.Label(frame2, text='i='+str(i)+', g='+str(g), borderwidth=3, relief='sunken')
                     aLabel.grid(row=i, column=g)
-        
+
+
         aButton = tk.Button(frame2, text='Open Process Properties', borderwidth=3, relief='raised')
         aButton.grid(row=13, columnspan=3, pady=5)
+
+        # def task():  #update loop
+        #     #  careful adding params, may make program not wait correctly and recurse into itself and crash
+        #     print('button task update:(2s)')
+        #     # aNum=aNum+1 # this caused an issue when a param
+        #     aButton.after(2000, task)  # recursive call makes proc loop without blocking
+        #     # ends up being executed during the mainloop along with other update events
+        #
+        # aButton.after(2000, task)#begins the infinite updates
         
         
 #         text1 = tk.Label(frame2, text='text1', relief='sunken')
@@ -104,18 +114,32 @@ class pySysMonitor_gui(tk.Frame):
 
     def say_hi(self):
         print("hi there, everyone!")
+        print('test button cmd, it worked!')
         
     def open_singleProcProp(self):
+
         pass
     
     def make_timeGraphContents(self):
         pass
     
     #toggle pause resume method
+    def toggleUpdate(self):
+        pass
     
     #bring proc or time graph to top
+    def raiseFrame(self):
+        pass
     
     #reorganize columns click
+    def columnClickReorganize(self):
+        pass
+
+
+
+def task():
+    print('task update')
+    root.after(2000, task)
 
 ##MAIN##
 if __name__ == '__main__':
@@ -134,9 +158,18 @@ if __name__ == '__main__':
 
     
     #define all the window preferences
-    
-    
-    
+
+    # intI=0
+    # print('task update:' + str(intI))
+    # print('--')
+    #adding an update event to that runs every 2s
+    def task():#careful adding params, may make program not wait correctly and recurse into itself and crash
+        print('task update:')
+        # aNum=aNum+1
+        root.after(5000, task)#recursive call makes proc loop without blocking
+        #ends up being executed during the mainloop along with other update events
+
+    root.after(5000, task)
     mainWindow = pySysMonitor_gui(master=root) #class made
     mainWindow.mainloop()
     print('program ending')
