@@ -76,9 +76,10 @@
 # print('')
 ########
 from subprocess import Popen, PIPE
-import psutil
-# 'ps', '-eo' ,'pid,args'
-process = Popen(['top'], stdout=PIPE, stderr=PIPE)
+
+# 'ps' '-Ao' 'user,uid,comm,pid,pcpu,tty' '--sort=-pcpu' '|' 'head' '-n' '6'
+# 'ps', '-Ao', 'user,uid,comm,pid,pcpu,tty', '--sort=-pcpu', '|', 'head', '-n', '6'
+process = Popen(['ps','-Ao', 'user,uid,comm,pid,pcpu,tty', '--sort=-pcpu'], stdout=PIPE, stderr=PIPE)
 stdout, notused = process.communicate()
 print(stdout)
 pidDict = {}
@@ -86,10 +87,10 @@ for line in stdout.splitlines():
 
     strLine = line.decode('utf-8')
     strLine = strLine.lstrip(' ')
-    pid, cmdline = strLine.split(' ', 1)
+    user, uid, comm, pid, pcpu, tty = strLine.split(' ', 1)
     print('')
-    print('pid:'+pid+', cmdline:'+cmdline)
-    pidDict[pid]=cmdline
+    print('pid:'+pid+', cmdline:'+comm)
+    pidDict[pid]=comm
 print('done')
 print('')
 ###########
