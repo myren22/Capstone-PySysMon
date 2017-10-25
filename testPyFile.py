@@ -1,3 +1,12 @@
+#####################
+#This file is essentially a play environment testing code found through module APIs
+#and code that is not behaving as desired within the main project.
+#Much of it could be deleted but sometimes these code chunks contain ways of doing things
+#that were unusual to me, but may still be useful to come back to.
+###################
+
+
+
 # print('hello kyle from git')
 
 # #####
@@ -76,9 +85,11 @@
 # print('')
 ########
 from subprocess import Popen, PIPE
-
-# 'ps' '-Ao' 'user,uid,comm,pid,pcpu,tty' '--sort=-pcpu' '|' 'head' '-n' '6'
-# 'ps', '-Ao', 'user,uid,comm,pid,pcpu,tty', '--sort=-pcpu', '|', 'head', '-n', '6'
+#popen does not store data if the cmd used creates data that updates
+#or change after being received, which is why 'head -n 6' which reduces the output to the top 6
+#appears not to work
+    # 'ps' '-Ao' 'user,uid,comm,pid,pcpu,tty' '--sort=-pcpu' '|' 'head' '-n' '6'
+    # 'ps', '-Ao', 'user,uid,comm,pid,pcpu,tty', '--sort=-pcpu', '|', 'head', '-n', '6'
 process = Popen(['ps','-Ao', 'user,uid,comm,pid,pcpu,tty', '--sort=-pcpu'], stdout=PIPE, stderr=PIPE)
 stdout, notused = process.communicate()
 print(stdout)
@@ -87,10 +98,11 @@ for line in stdout.splitlines():
 
     strLine = line.decode('utf-8')
     strLine = strLine.lstrip(' ')
-    user, uid, comm, pid, pcpu, tty = strLine.split(' ', 1)
-    print('')
-    print('pid:'+pid+', cmdline:'+comm)
-    pidDict[pid]=comm
+
+    wordList = strLine.split()
+    #user, uid, comm, pid, pcpu, tty
+    print('pid:'+wordList[3]+', cmdline:'+wordList[2])
+    pidDict[wordList[3]]=wordList
 print('done')
 print('')
 ###########

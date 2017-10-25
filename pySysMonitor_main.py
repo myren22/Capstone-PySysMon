@@ -26,8 +26,9 @@ for i in range(0,99):
     timeDict[i]['curTime']='' #int or string?
     #timeDict[i][somePIDnum]={}
 global pidDict
+boolTakeInData=True
 pidDict={}
-pidList=[[7,7,7,7,7,7],[7,7,7,7,7,7]]#2d
+# pidList=[[7,7,7,7,7,7],[7,7,7,7,7,7]]#2d
 dictFrames={}
 
 #time->pid->process traits
@@ -316,9 +317,6 @@ class pySysMonitor_gui(tk.Frame):
         frame = dictFrames[frameRaised]
         frame.tkraise()
 
-    
-
-
     #save a screenshot of each window
     def printScreen(self):
         #save location is configurable in options window
@@ -344,13 +342,7 @@ if __name__ == '__main__':
     y=100
     root.geometry('%dx%d+%d+%d' % (w, h, x, y))
 #     root.minsize(400, 300)#wont let user shrink below this
-
-    
     #define all the window preferences
-
-    # intI=0
-    # print('task update:' + str(intI))
-    # print('--')
     #adding an update event to that runs every 2s
     def task():#careful adding params, may make program not wait correctly and recurse into itself and crash
         print('task update:')
@@ -362,29 +354,28 @@ if __name__ == '__main__':
     def getProcIDs():
         # 'ps' '-Ao' 'user,uid,comm,pid,pcpu,tty' '--sort=-pcpu' '|' 'head' '-n' '6'
         # 'ps', '-Ao', 'user,uid,comm,pid,pcpu,tty', '--sort=-pcpu', '|', 'head', '-n', '6'
-        process = Popen(['ps', '-Ao', 'pid,comm,pcpu,pmem,user,uid', '--sort=-pcpu'], stdout=PIPE, stderr=PIPE)
-        stdout, notused = process.communicate()
-        print(stdout)
-        # pidDict = {}
-        for line in stdout.splitlines():
-            wordList=line.split()
-            print('hello')
-            print(pidList)
-            pidDict[wordList[0]]=wordList
+        if(boolTakeInData):
+            process = Popen(['ps', '-Ao', 'pid,comm,pcpu,pmem,user,uid', '--sort=-pcpu'], stdout=PIPE, stderr=PIPE)
+            stdout, notused = process.communicate()
+            print(stdout)
+            # pidDict = {}
+            print('---Contents of stdout follows----')
+            i=0
+            for line in stdout.splitlines():
+                i = i + 1
+                wordList=line.split()
+                if(i<60):
+                    print(wordList)
+                pidDict[wordList[0]]=wordList
 
-
-            # strLine = line.decode('utf-8')
-            # strLine = strLine.lstrip(' ')
-            # user, uid, comm, pid, pcpu, tty = strLine.split(' ', 1)
-            print('')
-            # print('pid:' + pid + ', cmdline:' + comm)
-            # pidDict[pid] = comm
-        print('done')
-        print('')
+            print('----done parse to dict----')
+            print('Dict contents:')
+            print(pidDict)
+        root.after(5000, getProcIDs)
         ###########
 
 
-    getProcIDs()
+    root.after(5000, getProcIDs)
     root.after(5000, task)
     mainWindow = pySysMonitor_gui(root) #class made
     root.mainloop()
@@ -398,3 +389,10 @@ if __name__ != '__main__':
 print('end of file')
     
 print('should always see this')
+
+
+# strLine = line.decode('utf-8')
+# strLine = strLine.lstrip(' ')
+# user, uid, comm, pid, pcpu, tty = strLine.split(' ', 1)
+# print('pid:' + pid + ', cmdline:' + comm)
+# pidDict[pid] = comm
