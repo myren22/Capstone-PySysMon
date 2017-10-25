@@ -25,8 +25,9 @@ for i in range(0,99):
     timeDict[i]={}
     timeDict[i]['curTime']='' #int or string?
     #timeDict[i][somePIDnum]={}
-global pidDict
+
 boolTakeInData=True
+
 pidDict={}
 # pidList=[[7,7,7,7,7,7],[7,7,7,7,7,7]]#2d
 dictFrames={}
@@ -87,10 +88,10 @@ class pySysMonitor_gui(tk.Frame):
         printBut['command'] = self.printScreen()
         resumeBut = tk.Button(rightButFrame, text= 'Resume')
         resumeBut.grid(row=1, column=4)
-        resumeBut['command'] = self.toggleUpdate(True)
+        resumeBut['command'] = lambda aBool=True: self.toggleUpdate(aBool)
         pauseBut = tk.Button(rightButFrame, text= 'Pause')
         pauseBut.grid(row=1, column=5)
-        pauseBut['command']= self.toggleUpdate(False)
+        pauseBut['command']=  lambda aBool=False: self.toggleUpdate(aBool)
 
 
         plvANDtgFrame = tk.Frame(self)
@@ -310,7 +311,8 @@ class pySysMonitor_gui(tk.Frame):
     
     #toggle pause resume method
     def toggleUpdate(self, aBool):
-        pass
+        boolTakeInData = aBool
+        print('Update Data is:'+str(aBool))
     
     #bring proc or time graph to top
     def raiseFrame(self, frameRaised):
@@ -352,9 +354,9 @@ if __name__ == '__main__':
         #ends up being executed during the mainloop along with other update events
 
     def getProcIDs():
-        # 'ps' '-Ao' 'user,uid,comm,pid,pcpu,tty' '--sort=-pcpu' '|' 'head' '-n' '6'
-        # 'ps', '-Ao', 'user,uid,comm,pid,pcpu,tty', '--sort=-pcpu', '|', 'head', '-n', '6'
-        if(boolTakeInData):
+        # 'ps', '-Ao', 'user,uid,comm,pid,pcpu,tty', '--sort=-pcpu', '|', 'head', '-n', '6' #head causes issues
+
+        if(boolTakeInData): #for some reason this ins't getting the memo when pause is pressed.
             process = Popen(['ps', '-Ao', 'pid,comm,pcpu,pmem,user,uid', '--sort=-pcpu'], stdout=PIPE, stderr=PIPE)
             stdout, notused = process.communicate()
             print(stdout)
@@ -371,12 +373,16 @@ if __name__ == '__main__':
             print('----done parse to dict----')
             print('Dict contents:')
             print(pidDict)
+        else:
+            print('not updating data')
+
+        print('bool is:'+str(boolTakeInData))
         root.after(5000, getProcIDs)
         ###########
 
 
     root.after(5000, getProcIDs)
-    root.after(5000, task)
+    # root.after(5000, task)
     mainWindow = pySysMonitor_gui(root) #class made
     root.mainloop()
     print('program ending')
