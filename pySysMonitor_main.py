@@ -162,8 +162,8 @@ class pySysMonitor_gui(tk.Frame):
         optionsWindow.title('PySysMonitor - Options')  # yep
         w = 500
         h = 400
-        x = 100
-        y = 100
+        x = 150
+        y = 120
         optionsWindow.geometry('%dx%d+%d+%d' % (w, h, x, y))
         # options i may want to make to have changeable while running
             # print screenshot save location
@@ -172,7 +172,7 @@ class pySysMonitor_gui(tk.Frame):
             # length of time tracked
         #
         titleLabel=tk.Label(optionsWindow, text= 'Configuration Options')
-        titleLabel.grid(row=1,column=1, sticky='n',rowspan=2)
+        titleLabel.grid(row=1,column=1, sticky='n')
         updateLabel=tk.Label(optionsWindow, text='Update Frequency(ms)')
         updateLabel.grid(row=2,column=1)
         updateEntry = tk.Entry(optionsWindow)
@@ -231,8 +231,8 @@ class pySysMonitor_gui(tk.Frame):
         procPropWind.title('PySysMonitor - Process Properties')  # yep
         w = 500
         h = 400
-        x = 100
-        y = 100
+        x = 150
+        y = 120
         procPropWind.geometry('%dx%d+%d+%d' % (w, h, x, y))
         # options i may want to make to have changeable while running
         # print screenshot save location
@@ -371,9 +371,9 @@ class pySysMonitor_gui(tk.Frame):
             #'comm,user'
             process = Popen(['ps', '-Ao', 'pid,pcpu,pmem,user,comm', '--sort=-pcpu'], stdout=PIPE, stderr=PIPE)
             stdout,_= process.communicate()
-            print(stdout)
+            # print(stdout)
             print('time:', time.time())
-            print('gmtime',time.gmtime(time.time()), ', localtime:',time.localtime(time.time()))
+            # print('gmtime',time.gmtime(time.time()), ', localtime:',time.localtime(time.time()))
             # columns of numbers are right aligned
             # columns of text are left aligned
 
@@ -401,10 +401,10 @@ class pySysMonitor_gui(tk.Frame):
                     # self.pidList.append(wordList[0:4]+[commStrJoin])
 
 
-            print('----done parse to dict----')
-            print('Dict contents:')
+            # print('----done parse to dict----')
+            # print('Dict contents:')
             # print(self.pidDict)
-            print('pidList: ',self.pidList)
+            # print('pidList: ',self.pidList)
 
 
             #rewrite plvTree
@@ -454,8 +454,8 @@ class pySysMonitor_gui(tk.Frame):
         else:
             print('not updating data')
 
-        print('bool is:'+str(self.boolTakeInData))
-        self.after(5000, self.getProcIDs)
+        # print('bool is:'+str(self.boolTakeInData))
+        self.after(self.updateIntervalMS, self.getProcIDs)
         ###########
 
 
@@ -538,7 +538,7 @@ class pySysMonitor_gui(tk.Frame):
     #toggle pause resume method
     def toggleUpdate(self, aBool):
         self.boolTakeInData = aBool
-        print('Update Data is:'+str(aBool))
+        # print('Update Data is:'+str(aBool))
     
     #bring proc or time graph to top
     def raiseFrame(self, frameRaised):
