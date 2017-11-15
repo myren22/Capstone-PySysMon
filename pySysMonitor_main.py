@@ -60,6 +60,7 @@ from tkinter.ttk import *
 # import re
 # import subprocess
 # import sys
+import os
 from subprocess import Popen, PIPE
 
 # ---#
@@ -71,22 +72,35 @@ print('start')
 
 
 # -----------------------------------------------
-class PySysMonitor_gui(tk.Frame):
+class PySysMonitor_gui(tk.Tk):
     # -----------------------------------------------
     # Purpose: PySysMonitor_gui provides ..
     #
     # -----------------------------------------------
 
     # -----------------------------------------------
-    def __init__(self, parent):
+    def __init__(self):
         # -----------------------------------------------
         # Purpose:  To be the contructor/initialize variables in the class
         # -----------------------------------------------
-        tk.Frame.__init__(self, parent)  # embeds this frame class in a parent
+        tk.Tk.__init__(self)  # no idea what sN or bN do.
+        self.title('PySysMonitor')  # yep
+        w = 1000  # was 600
+        h = 700  # was 400
+        x = 50  #
+        y = 50  #
+        self.geometry('%dx%d+%d+%d' % (w, h, x, y))
+        imgicon = PhotoImage(file=os.path.join(os.curdir, 'Icon.png'))
+        self.call('wm', 'iconphoto', self._w, imgicon)
+        def on_closing():
+            self.quit()
+        self.protocol("WM_DELETE_WINDOW",on_closing)
+
+        # tk.Frame.__init__(self, parent)  # embeds this frame class in a parent
 
         self['relief'] = 'raised'
-        self['borderwidth'] = 4
-        self.pack(fill='both', expand=1)  # now it will be visible
+        self['borderwidth'] = 2
+        # root.pack(fill='both', expand=1)  # now it will be visible
 
         # setup window setting
         # name, size, exit button,
@@ -103,9 +117,14 @@ class PySysMonitor_gui(tk.Frame):
         self.desigCol = 'CPU%'
         self.desigDescend = 1
         self.plvTree = None
+        self.PIDtoGraph = 0
+        self.ActivePIDbeingGraphed = -1
 
         # run create gui methods
         self.create_widgets()  #
+
+
+        self.mainloop()
 
     # ----------------------------------------------------------------------------
     def create_widgets(self):
@@ -137,7 +156,7 @@ class PySysMonitor_gui(tk.Frame):
         self.grid_rowconfigure(2, weight=12)
         self.grid_columnconfigure(1, weight=1)
         #region topBarFrame
-        topBarFrame = tk.Frame(self, relief='sunken', borderwidth=5, bg='teal')
+        topBarFrame = tk.Frame(self)#relief='raised', borderwidth=2, bg='teal'
         topBarFrame.grid(row=1, column=1, sticky='new')
 
         # aButtonBox.pack(side='top',fill='both', expand=1)
@@ -232,7 +251,7 @@ class PySysMonitor_gui(tk.Frame):
         plvANDtgFrame.grid_rowconfigure(2, weight=1)
 
         # region Overlay #1:    ProcessListView
-        proclistFrame = tk.Frame(plvANDtgFrame, relief='sunken', borderwidth=4, width=450)
+        proclistFrame = tk.Frame(plvANDtgFrame, relief='sunken', borderwidth=2, width=450)
         proclistFrame.grid(row=2, column=1, sticky='nsew')  # pack(side='left', )
         proclistFrame.grid_columnconfigure(2, weight=1)
         proclistFrame.grid_rowconfigure(2, weight=1)
@@ -240,7 +259,7 @@ class PySysMonitor_gui(tk.Frame):
 
         ttk.Label(proclistFrame, text='Process List View').grid(row=0, column=2, sticky='nwe')
 
-        procListTableFrame = tk.Frame(proclistFrame, relief='sunken', borderwidth=4)
+        procListTableFrame = tk.Frame(proclistFrame, relief='sunken', borderwidth=2)
         procListTableFrame.grid(row=2, column=2, sticky='nsew')
         self.plvTree, _ = self.make_procListViewFrame(procListTableFrame)
         #           ^ ^^
@@ -249,18 +268,18 @@ class PySysMonitor_gui(tk.Frame):
         # update tree. timer and check
 
         # Overlay #2:   TimeGraphFrame
-        timeGraphFrame = tk.Frame(plvANDtgFrame, relief='sunken', borderwidth=4)
+        timeGraphFrame = tk.Frame(plvANDtgFrame, relief='sunken', borderwidth=2)
         timeGraphFrame.grid(row=2, column=1, sticky='nsew')
         timeGraphFrame.grid_columnconfigure(2, weight=1)
         timeGraphFrame.grid_rowconfigure(2, weight=1)
         self.dictFrames['timeGraph'] = timeGraphFrame
 
         ttk.Label(timeGraphFrame, text='Process Time Graph').grid(row=0, column=2, sticky='nwe')
-        timeGraphTableFrame = tk.Frame(timeGraphFrame, relief='raised', borderwidth=20)
+        timeGraphTableFrame = tk.Frame(timeGraphFrame, relief='raised', borderwidth=2)
         self.make_timeGraphContents(timeGraphTableFrame)
         timeGraphTableFrame.grid(row=2, column=2, sticky='nsew')
 
-        # self.after(self.updateIntervalMS, self.getProcIDs)
+        self.after(self.updateIntervalMS, self.getProcIDs)
 
         # end create_widgets
 
@@ -509,6 +528,31 @@ class PySysMonitor_gui(tk.Frame):
         # returns  New
         # ----------------------------------------------------------------
 
+
+        #--------------------------------------------------------
+        def acceptAndGraphPID():
+        #--------------------------------------------------------
+        # User has pressed the ACCEPT button and desires to have
+        #   the  PID he has entered to be graphed.
+        #--------------------------------------------------------
+            PIDid = self.PID_GuiEntry.get()     # PID user has entered at the GUI
+            print ('Verifying PIDid', PIDid)
+            PIDstr = str(PIDid)
+
+            # verify the PID actually exists
+            try:
+               rowDataForPID = self.pidDict[PIDstr]
+            except:
+               print(    '"NOT VALID PID:', PIDstr)
+
+            if (len(rowDataForPID) < 3):
+               print("   NO Data for what appears to be a VALID PID: Will not graph")
+            else:
+               print("   VALID PID ===> self.raiseFrame( timeGraph)")
+               self.raiseFrame('timeGraph')
+
+        # end acceptAndGraphPID --------------------------------
+
         enabledColumns = ['PID', 'CPU%', 'RAM%', 'User', 'Comm']  # Column Titles displayed at Top of Table.
         # pid,pcpu,pmem,user,comm
 
@@ -538,10 +582,18 @@ class PySysMonitor_gui(tk.Frame):
         plvFrame.grid_columnconfigure(0, weight=1)
         plvFrame.grid_rowconfigure(0, weight=1)
 
+        # -------------- Bottom Right -----------------------------------
+        # 4:                 PID ID         :  ____####_____
+        # 5:                 ACCEPT_BUTTON
+        # ---------------------------------------------------------------
         PIDLabel = tk.Label(plvFrame, text='PID to Graph:')
         PIDLabel.grid(row=4, column=0, sticky='e')
         self.PIDEntry = tk.Entry(plvFrame)
         self.PIDEntry.grid(row=4, column=1)
+
+        # When ACCEPT button pressed call --> acceptAndGraphPID
+        acceptPIDBut = tk.Button(plvFrame, text='Accept', command=acceptAndGraphPID)
+        acceptPIDBut.grid(row=5, column=1)
 
         # build tree
         for col in enabledColumns:
@@ -601,8 +653,14 @@ class PySysMonitor_gui(tk.Frame):
             self.strPSatrFound = 'pid,comm,pcpu,pmem,user,uid'
             # 'pid,pcpu,pmem,uid'
             # 'comm,user'
-            #  command: "ps -Ao pid,pcpu,pmem,user,comm  --sort=-pcpu"
-            #                "ps    -Ao    pid,pcpu,pmem,user,comm,cmd    --sort=-pcpu"
+            #  where:    -Ao = All processes.
+            #           pid  = Process ID(float)
+            #           pcpu = Percentage CPU utilization(float)
+            #           pmem = Percentage Memory utilization(float)
+            #           user = User Name(str)
+            #           comm = Command being executed(str)
+            # "--sort=-pcpu" = Sort data based on percentage CPU utilization
+            #
             process = Popen(['ps', '-Ao', 'pid,pcpu,pmem,user,comm,cmd', '--sort=-pcpu'], stdout=PIPE, stderr=PIPE)
             stdout, _ = process.communicate()
 
@@ -614,7 +672,6 @@ class PySysMonitor_gui(tk.Frame):
 
             timestamp = time.time()
 
-            # pidDict = {}
             print('---Contents of stdout follows----')
             i = -1
             self.pidList = []
@@ -791,6 +848,14 @@ class PySysMonitor_gui(tk.Frame):
 
         pass
 
+    def periodic_update_timeGraph(self):
+    #-----------------------------------------------------------------------------
+    # Purpose:  This updates the timeGraph tables
+    #-----------------------------------------------------------------------------
+        pass
+        #
+
+
     # -----------------------------------------------
     def toggleUpdate(self, aBool):
         # -----------------------------------------------
@@ -822,26 +887,29 @@ if __name__ == '__main__':
     # this runs if this is the first/start program in execution
     print(__name__)
     print('hey this is the main case')
+    PySysMonitor_gui()
+    #PySysMonitor_gui()
+    #eventually move all of roots into class method, so this only starts class
 
-    root = tk.Tk()  # no idea what sN or bN do.
-    root.title('PySysMonitor')  # yep
-    w = 1000  # was 600
-    h = 700  # was 400
-    x = 50  # was 100
-    y = 50  # was 100
-
-
-    root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-    def on_closing():
-        root.destroy()
-    root.protocol("WM_DELETE_WINDOW",on_closing)
+    # root = tk.Tk()  # no idea what sN or bN do.
+    # root.title('PySysMonitor')  # yep
+    # w = 1000#was 600
+    # h = 700 #was 400
+    # x = 50  #
+    # y = 50  #
+    # root.geometry('%dx%d+%d+%d' % (w, h, x, y))
+    # imgicon = PhotoImage(file=os.path.join(os.curdir, 'Icon.png'))
+    # root.tk.call('wm', 'iconphoto', root._w, imgicon)
+    # def on_closing():
+    #     root.destroy()
+    # root.protocol("WM_DELETE_WINDOW",on_closing)
 
 
 
     #     root.minsize(400, 300)#wont let user shrink below this
     # define all the window preferences
-    mainWindow = PySysMonitor_gui(root)  # class made
-    root.mainloop()
+    # mainWindow = PySysMonitor_gui(root)  # class made
+    # root.mainloop()
     print('program ending')
 
 if __name__ != '__main__':
