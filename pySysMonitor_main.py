@@ -49,7 +49,7 @@ from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import matplotlib.animation as mAnimation
-
+from pprint import pprint
 import tkinter as tk
 import tkinter.font as tkFont
 import tkinter.ttk as ttk
@@ -62,6 +62,9 @@ from tkinter.ttk import *
 # import sys
 import os
 from subprocess import Popen, PIPE
+
+# from PIL import Image, ImageTk#still buggy, needed for screenprinting only tk wind
+# import pyscreenshot as ImageGrab # For Linux
 
 # ---#
 
@@ -83,24 +86,20 @@ class PySysMonitor_gui(tk.Tk):
         # -----------------------------------------------
         # Purpose:  To be the contructor/initialize variables in the class
         # -----------------------------------------------
-        tk.Tk.__init__(self)  # no idea what sN or bN do.
-        self.title('PySysMonitor')  # yep
-        w = 1000  # was 600
-        h = 700  # was 400
-        x = 50  #
-        y = 50  #
-        self.geometry('%dx%d+%d+%d' % (w, h, x, y))
+        tk.Tk.__init__(self)
+        self.title('PySysMonitor')
+        width,height, xPos, yPos = [1000,700,50,50]
+        self.geometry('%dx%d+%d+%d' % (width,height, xPos, yPos))
+        # set the taskbar icon
         imgicon = PhotoImage(file=os.path.join(os.curdir, 'Icon.png'))
         self.call('wm', 'iconphoto', self._w, imgicon)
+        # change X close to end program
         def on_closing():
             self.quit()
         self.protocol("WM_DELETE_WINDOW",on_closing)
-
-        # tk.Frame.__init__(self, parent)  # embeds this frame class in a parent
-
+        
         self['relief'] = 'raised'
         self['borderwidth'] = 2
-        # root.pack(fill='both', expand=1)  # now it will be visible
 
         # setup window setting
         # name, size, exit button,
@@ -110,7 +109,7 @@ class PySysMonitor_gui(tk.Tk):
         self.dictFrames = {}
         self.pidDict = {}
         self.boolTakeInData = True
-        self.updateIntervalMS = 4000
+        self.updateIntervalMS = 6000
         self.timeTrackDurat = 60
         self.printSaveDir = r'/home/kyle/Software Downloads/Capstone/Screenshots'
         self.strPSatrFound = None
@@ -119,12 +118,13 @@ class PySysMonitor_gui(tk.Tk):
         self.plvTree = None
         self.PIDtoGraph = 0
         self.ActivePIDbeingGraphed = -1
+        self.visColumns=['PID', 'CPU%', 'RAM%', 'User', 'Process Name']
 
         # run create gui methods
         self.create_widgets()  #
-
-
-        self.mainloop()
+        
+        self.mainloop()        
+        # end init. program loops till close.------
 
     # ----------------------------------------------------------------------------
     def create_widgets(self):
@@ -159,8 +159,6 @@ class PySysMonitor_gui(tk.Tk):
         topBarFrame = tk.Frame(self)#relief='raised', borderwidth=2, bg='teal'
         topBarFrame.grid(row=1, column=1, sticky='new')
 
-        # aButtonBox.pack(side='top',fill='both', expand=1)
-
         # ===============================================================================
         # Create the buttons for the Top Bar
         # Row:
@@ -172,7 +170,6 @@ class PySysMonitor_gui(tk.Tk):
         # ===============================================================================
 
         topBarFrame.grid_columnconfigure(1, minsize=40, weight=1)
-        # topBarFrame.grid_columnconfigure(2, minsize=80, weight=10)
         topBarFrame.grid_columnconfigure(3, minsize=80, weight=1)
 
         # left button frame and its contents
@@ -262,10 +259,6 @@ class PySysMonitor_gui(tk.Tk):
         procListTableFrame = tk.Frame(proclistFrame, relief='sunken', borderwidth=2)
         procListTableFrame.grid(row=2, column=2, sticky='nsew')
         self.plvTree, _ = self.make_procListViewFrame(procListTableFrame)
-        #           ^ ^^
-        #      comma   underscore equals
-
-        # update tree. timer and check
 
         # Overlay #2:   TimeGraphFrame
         timeGraphFrame = tk.Frame(plvANDtgFrame, relief='sunken', borderwidth=2)
@@ -279,7 +272,9 @@ class PySysMonitor_gui(tk.Tk):
         self.make_timeGraphContents(timeGraphTableFrame)
         timeGraphTableFrame.grid(row=2, column=2, sticky='nsew')
 
-        self.after(self.updateIntervalMS, self.getProcIDs)
+        self.after(1000, self.getProcIDs)
+            #chose not to use global var, want first update to happen now
+        self.raiseFrame('procList')
 
         # end create_widgets
 
@@ -295,60 +290,69 @@ class PySysMonitor_gui(tk.Tk):
         # ----------------------------------------------------------------------------
         optionsWindow = tk.Toplevel()
         optionsWindow.title('PySysMonitor - Options')  # yep
-        w = 500
-        h = 400
-        x = 150
-        y = 120
-        optionsWindow.geometry('%dx%d+%d+%d' % (w, h, x, y))
-        # options i may want to make to have changeable while running
-        # print screenshot save location
-        # frequency of process update
-        # what columns are shown in process list view
-        # length of time tracked
-        #
+        # width,height, xPos, yPos = [450,150,150,120]
+        # optionsWindow.geometry('%dx%d+%d+%d' % (width,height, xPos, yPos))
 
         # ===============================================================================
         # Create some Option fields where the user can enter data.
         # ===============================================================================
-
-        #       # The window contains some entry fields
         titleLabel = tk.Label(optionsWindow, text='Configuration Options')
-        titleLabel.grid(row=1, column=1, sticky='n')
+        titleLabel.grid(column=1, row=1 ,columnspan=2,rowspan=1,sticky='')
         updateLabel = tk.Label(optionsWindow, text='Update Frequency(ms)')
         updateLabel.grid(row=2, column=1)
         updateEntry = tk.Entry(optionsWindow)
-        updateEntry.grid(row=2, column=2)
+        updateEntry.grid(row=2, column=2, sticky='EW')
 
         tk.Label(optionsWindow, text='Print Save Dir.').grid(row=3, column=1)
         printSaveDirEntry = tk.Entry(optionsWindow)
-        printSaveDirEntry.grid(row=3, column=2)
+        printSaveDirEntry.grid(row=3, column=2, sticky='EW')
 
         tk.Label(optionsWindow, text='Length Time Tracked(s)').grid(row=4, column=1)
         timeTrackEntry = tk.Entry(optionsWindow)
-        timeTrackEntry.grid(row=4, column=2)
+        timeTrackEntry.grid(row=4, column=2, sticky='EW')
 
         tk.Label(optionsWindow, text='Columns Displayed').grid(row=5, column=1)
-        # self.tree["displaycolumns"]=("artistCat", "artistDisplay") #just alter the headings listed
-        pidCheckBut = tk.Checkbutton(optionsWindow, text='PID').grid(row=5, column=2)
-        pcpuCheckBut = tk.Checkbutton(optionsWindow, text='pcpu').grid(row=5, column=3)
-        pramCheckBut = tk.Checkbutton(optionsWindow, text='pram').grid(row=5, column=4)
+        checkButFrame = tk.Frame(optionsWindow)
+        checkButFrame.grid(row=5, column=2)
+        pidCheckButVar = IntVar()
+        pidCheckBut = tk.Checkbutton(checkButFrame, text='PID', variable=pidCheckButVar).pack(side='left')
+        pcpuCheckButVar = IntVar()
+        pcpuCheckBut = tk.Checkbutton(checkButFrame, text='%CPU', variable=pcpuCheckButVar).pack(side='left')
+        pramCheckButVar = IntVar()
+        pramCheckBut = tk.Checkbutton(checkButFrame, text='%RAM', variable=pramCheckButVar).pack(side='left')
+        userCheckButVar = IntVar()
+        userCheckBut = tk.Checkbutton(checkButFrame, text='User', variable=userCheckButVar).pack(side='left')
+        commCheckButVar = IntVar()
+        commCheckBut = tk.Checkbutton(checkButFrame, text='Process Name', variable=commCheckButVar).pack(side='left')
 
-        optionsWindow.grid_rowconfigure(1, minsize=50, weight=1)
-        # optionsWindow.grid_rowconfigure(2, minsize=50, weight=1)
-        optionsWindow.grid_columnconfigure(1, minsize=50, weight=1)
-        optionsWindow.grid_columnconfigure(2, minsize=50, weight=1)
 
         # Accept, Cancel, Default
-        # --------------------------------------------------------
         def applyOptions():
             # --------------------------------------------------------
             # Purpose: The ACCEPT button has been pressed by the user
             #   and this method then saves the values the user has changed.
             # --------------------------------------------------------
-
             self.updateIntervalMS = int(updateEntry.get())
             self.timeTrackDurat = int(timeTrackEntry.get())
             self.printSaveDir = printSaveDirEntry.get()
+            #checkbuttons
+                #['PID', 'CPU%', 'RAM%', 'User', 'Comm']
+                #if checked
+                    #add to displayList
+                #... repeat for all columns/checkbuttons
+                #run plvTree show with current list
+            listPLVheaderShown=[]
+            if (pidCheckButVar.get() == 1):
+                listPLVheaderShown.append('PID')
+            if (pcpuCheckButVar.get() == 1):
+                listPLVheaderShown.append('CPU%')
+            if (pramCheckButVar.get() == 1):
+                listPLVheaderShown.append('RAM%')
+            if (userCheckButVar.get() == 1):
+                listPLVheaderShown.append('User')
+            if (commCheckButVar.get() == 1):
+                listPLVheaderShown.append('Process Name')
+            self.plvTree['displaycolumns']=listPLVheaderShown
 
         # --------------------------------------------------------
         def restoreDefaults():
@@ -362,6 +366,28 @@ class PySysMonitor_gui(tk.Tk):
             printSaveDirEntry.insert(END, self.printSaveDir)
             timeTrackEntry.delete(0, END)
             timeTrackEntry.insert(END, self.timeTrackDurat)
+            if('PID' in self.visColumns):
+                pidCheckButVar.set(1)
+            else:
+                pidCheckButVar.set(0)
+            if ('CPU%' in self.visColumns):
+                pcpuCheckButVar.set(1)
+            else:
+                pcpuCheckButVar.set(0)
+            if ('RAM%' in self.visColumns):
+                pramCheckButVar.set(1)
+            else:
+                pramCheckButVar.set(0)
+            if ('User' in self.visColumns):
+                userCheckButVar.set(1)
+            else:
+                userCheckButVar.set(0)
+            if ('Process Name' in self.visColumns):
+                commCheckButVar.set(1)
+            else:
+                commCheckButVar.set(0)
+
+
 
         # ===============================================================================
         # Create the buttons for the Bottom Bar:
@@ -372,7 +398,7 @@ class PySysMonitor_gui(tk.Tk):
         restoreDefaults()  # start off by loading the GUI fields with the default values
 
         botButFrame = tk.Frame(optionsWindow)
-        botButFrame.grid(row=6, column=2)
+        botButFrame.grid(column=1, row=6 ,columnspan=2,rowspan=1,sticky='')
 
         acceptBut = tk.Button(botButFrame, text='Accept', command=applyOptions)
         acceptBut.grid(row=1, column=2)
@@ -382,10 +408,7 @@ class PySysMonitor_gui(tk.Tk):
 
         defaultsBut = tk.Button(botButFrame, text='Defaults', command=restoreDefaults)
         defaultsBut.grid(row=1, column=4)
-        # acceptBut['command'] = lambda aBool=False: self.toggleUpdate(aBool)
-
         # end of open_optionsWindow
-        pass
 
     # ----------------------------------------------------------------------------
     def open_singleProcProp(self):
@@ -393,29 +416,18 @@ class PySysMonitor_gui(tk.Tk):
         # Purpose: To bring up the popup PROCESS PROPERTIES display.
         #    When the user clicks on the PROC_PROP button, the popup window will appear
         #    where the user can custimize some options.
-        #  The window contains some entry fields the user can enter data in such as:
-        #   the FREQUENCY, the SAVE directory, the LENGTH OF TIME tracked, etc.
         #  There is a CANCEL button at the bottom.
         # ----------------------------------------------------------------------------
         procPropWind = tk.Toplevel()
         procPropWind.title('PySysMonitor - Process Properties')  # yep
-        w = 500
-        h = 400
-        x = 150
-        y = 120
-        procPropWind.geometry('%dx%d+%d+%d' % (w, h, x, y))
-        # options i may want to make to have changeable while running
-        # print screenshot save location
-        # frequency of process update
-        # what columns are shown in process list view
-        # length of time tracked
-        #
+        # width,height, xPos, yPos = [450,150,150,120]
+        # procPropWind.geometry('%dx%d+%d+%d' % (width,height, xPos, yPos))
 
         # ===============================================================================
         # Create some Option fields where the user can enter data.
         # ===============================================================================
         titleLabel = tk.Label(procPropWind, text='Process Properties')
-        titleLabel.grid(row=1, column=1)
+        titleLabel.grid(column=1, row=1 ,columnspan=2,rowspan=1,sticky='')
         updateLabel = tk.Label(procPropWind, text='Update Frequency(ms)').grid(row=2, column=1)
         updateEntry = tk.Entry(procPropWind).grid(row=2, column=2)
 
@@ -434,14 +446,8 @@ class PySysMonitor_gui(tk.Tk):
         #
         # ===============================================================================
         cancelBut = tk.Button(procPropWind, text='Cancel', command=lambda: procPropWind.destroy())
-        cancelBut.grid(row=6, column=2)
-
-        procPropWind.grid_rowconfigure(1, minsize=50, weight=1)
-        # optionsWindow.grid_rowconfigure(2, minsize=50, weight=1)
-        procPropWind.grid_columnconfigure(1, minsize=50, weight=1)
-        procPropWind.grid_columnconfigure(2, minsize=50, weight=1)
-
-        pass
+        cancelBut.grid(row=6, column1=2)
+        #end single_proc_prop
 
     # ----------------------------------------------------------------
     def columnSort(self, *posArgs):  # tree, col, descending,
@@ -460,19 +466,10 @@ class PySysMonitor_gui(tk.Tk):
         col = self.desigCol
         descending = self.desigDescend
 
-        #
-        # if kwargs.has_key('tree'):
-        #     tree=kwargs['tree']
-        # if kwargs.has_key('col'):
-        #     col = kwargs['col']
-        # if kwargs.has_key('descending'):
-        #     descending = kwargs['descending']
-
-        """sort tree contents when a column header is clicked on"""
+        # """sort tree contents when a column header is clicked on"""
         # grab values to sort
         data = [[tree.set(child, col), child] \
                 for child in tree.get_children()]
-        # print('formated DATA--', data)
 
         # this make it so that the columns with the given names get treated as purely filled with floats
         # as opposed to filled with strings.
@@ -531,11 +528,11 @@ class PySysMonitor_gui(tk.Tk):
 
         #--------------------------------------------------------
         def acceptAndGraphPID():
-        #--------------------------------------------------------
-        # User has pressed the ACCEPT button and desires to have
-        #   the  PID he has entered to be graphed.
-        #--------------------------------------------------------
-            PIDid = self.PID_GuiEntry.get()     # PID user has entered at the GUI
+            #--------------------------------------------------------
+            # User has pressed the ACCEPT button and desires to have
+            #   the  PID he has entered to be graphed.
+            #--------------------------------------------------------
+            PIDid = self.PIDEntry.get()     # PID user has entered at the GUI
             print ('Verifying PIDid', PIDid)
             PIDstr = str(PIDid)
 
@@ -550,25 +547,13 @@ class PySysMonitor_gui(tk.Tk):
             else:
                print("   VALID PID ===> self.raiseFrame( timeGraph)")
                self.raiseFrame('timeGraph')
+            # end acceptAndGraphPID --------------------------------
 
-        # end acceptAndGraphPID --------------------------------
-
-        enabledColumns = ['PID', 'CPU%', 'RAM%', 'User', 'Comm']  # Column Titles displayed at Top of Table.
-        # pid,pcpu,pmem,user,comm
-
-        procList = [  # Just initialize the array (first two columns) to bogus values, just for future debugging.
-            [2, 50],  # These will be overwritten later.
-            [1, 7],
-            [0, 100],
-            [3, 9.5],
-            [4, 0],
-            [5, 9999]
-        ]
-
+        enabledColumns = ['PID', 'CPU%', 'RAM%', 'User', 'Process Name']  # Column Titles displayed at Top of Table.
         plvFrame = ttk.Frame(parent)
         plvFrame.pack(fill='both', expand=True)
 
-        plvTree = ttk.Treeview(plvFrame, columns=enabledColumns, show='headings')  # Display Column headings
+        plvTree = ttk.Treeview(plvFrame, columns=enabledColumns, show='headings', displaycolumns=enabledColumns)  # Display Column headings
 
         vsb = ttk.Scrollbar(plvFrame, orient='vertical', command='self.tree.yview')
         hsb = ttk.Scrollbar(plvFrame, orient='horizontal', command='self.tree.xview')
@@ -597,20 +582,12 @@ class PySysMonitor_gui(tk.Tk):
 
         # build tree
         for col in enabledColumns:
-            plvTree.heading(col, text=col.title(),
+            plvTree.heading(col, text=col,
                             command=lambda c=col: self.columnSort(plvTree, c, 0))
             # adjust the column's width to the header string
             plvTree.column(col,
                            width=tkFont.Font().measure(col.title()), anchor='e')
 
-        for item in procList:  # 2dlist
-            plvTree.insert('', 'end', values=item)
-            # adjust column's width if necessary to fit each value
-            for ix, val in enumerate(item):
-                col_w = tkFont.Font().measure(val)
-                if plvTree.column(enabledColumns[ix], width=None) < col_w:
-                    plvTree.column(enabledColumns[ix], width=col_w)
-        # end build tree#
 
         def eventClick(event):
             print('item click')
@@ -618,27 +595,16 @@ class PySysMonitor_gui(tk.Tk):
             val = plvTree.focus()
             print(val)#tree item id
             print('itemText',plvTree.item(val)['text'])
-
+            self.PIDEntry.delete(0, END)
+            self.PIDEntry.insert(END, plvTree.item(val)['text'])
         plvTree.bind("<<TreeviewSelect>>", eventClick)
-
 
         # plvTree.insert('', 'end', text='button', tags=('ttk', 'simple'))
         # plvTree.tag_configure('ttk', background='yellow')
         # plvTree.tag_bind('ttk', '<1>', eventClick)  # the item clicked can be found via tree.focus()
 
-
-
-
-
-        # plvFrame.after(self.updateIntervalMS, self.getProcIDs)  # ----> periodic update
-
         return plvTree, plvFrame  # new Tree,  new Frame that the new Tree is in.
-
-        # frame - processes list view
-        # plvFrame = tk.Frame(plvANDtgFrame)
-        # dummyBut1= tk.Button(plvFrame, text='plvBut')
-        # dummyBut1.pack()
-        # reorganize columns click
+        #end make_procListViewFrame -------------------------------
 
     # -----------------------------------------------------------------------------
     def getProcIDs(self):
@@ -646,7 +612,8 @@ class PySysMonitor_gui(tk.Tk):
         # Purpose:  This method is called periodically
         # -----------------------------------------------------------------------------
 
-        # 'ps', '-Ao', 'user,uid,comm,pid,pcpu,tty', '--sort=-pcpu', '|', 'head', '-n', '6' #head causes issues
+        # 'ps', '-Ao', 'user,uid,comm,pid,pcpu,tty', '--sort=-pcpu', '|', 'head', '-n', '6' 
+        #head causes issues
 
         if (self.boolTakeInData):  # for some reason this ins't getting the memo when pause is pressed.
 
@@ -663,8 +630,6 @@ class PySysMonitor_gui(tk.Tk):
             #
             process = Popen(['ps', '-Ao', 'pid,pcpu,pmem,user,comm,cmd', '--sort=-pcpu'], stdout=PIPE, stderr=PIPE)
             stdout, _ = process.communicate()
-
-            # print(stdout)
             print('time:', time.time())
             # print('gmtime',time.gmtime(time.time()), ', localtime:',time.localtime(time.time()))
             # columns of numbers are right aligned
@@ -702,7 +667,7 @@ class PySysMonitor_gui(tk.Tk):
                     SeventhField = wordList[7]
                     # print("SeventhField:", SeventhField)   # Debug print
                     if ("pid,pcpu,pmem" in SeventhField):
-                        print('************ Skip this line!!!! *****')
+                        # print('************ Skip this line!!!! *****')
                         continue  # ------> skip this line (as it's our own command line)
 
                 # Add the PID to our list (pidDict)
@@ -828,7 +793,10 @@ class PySysMonitor_gui(tk.Tk):
         t = np.arange(0.0, 3.0, 0.01)  # First Item  (X)  Go from 0.0 to 3.0 by size 0.1
         s = np.sin(2 * np.pi * t)  # Second Item (Y)  What to plot
 
-        ax.plot(t, s)  # Plot the X (t)  and Y (s) values
+        ax.plot(t, s)  # Plot the X (t)  and Y (s) values #,color='r', label='line1'
+        #axes.lines
+        #find line1pid<--contains color, x y values
+
 
         # a tk.DrawingArea
         canvas = FigureCanvasTkAgg(fig, master=matplotFrame)
@@ -844,17 +812,7 @@ class PySysMonitor_gui(tk.Tk):
             key_press_handler(event, canvas, toolbar)
 
         canvas.mpl_connect('key_press_event', on_key_event)
-        #######
-
-        pass
-
-    def periodic_update_timeGraph(self):
-    #-----------------------------------------------------------------------------
-    # Purpose:  This updates the timeGraph tables
-    #-----------------------------------------------------------------------------
-        pass
-        #
-
+        #######end make_timeGraphContents
 
     # -----------------------------------------------
     def toggleUpdate(self, aBool):
@@ -886,39 +844,16 @@ class PySysMonitor_gui(tk.Tk):
 if __name__ == '__main__':
     # this runs if this is the first/start program in execution
     print(__name__)
-    print('hey this is the main case')
+    print('Main case start')
     PySysMonitor_gui()
-    #PySysMonitor_gui()
-    #eventually move all of roots into class method, so this only starts class
 
-    # root = tk.Tk()  # no idea what sN or bN do.
-    # root.title('PySysMonitor')  # yep
-    # w = 1000#was 600
-    # h = 700 #was 400
-    # x = 50  #
-    # y = 50  #
-    # root.geometry('%dx%d+%d+%d' % (w, h, x, y))
-    # imgicon = PhotoImage(file=os.path.join(os.curdir, 'Icon.png'))
-    # root.tk.call('wm', 'iconphoto', root._w, imgicon)
-    # def on_closing():
-    #     root.destroy()
-    # root.protocol("WM_DELETE_WINDOW",on_closing)
-
-
-
-    #     root.minsize(400, 300)#wont let user shrink below this
-    # define all the window preferences
-    # mainWindow = PySysMonitor_gui(root)  # class made
-    # root.mainloop()
     print('program ending')
 
 if __name__ != '__main__':
     # this runs if the .py file is called during a different classes execution
     print(__name__)
-    print('hey this is the NOT main case')
+    print('NOT main case')
 
 print('end of file')
-
-print('should always see this')
 
 
