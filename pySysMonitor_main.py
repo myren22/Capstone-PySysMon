@@ -1,8 +1,6 @@
-'''
-Created on Oct 3, 2017
-
-@author: KyleWin10
-'''
+# Created on Oct 3, 2017
+#
+# @author: KyleWin10
 #-------------------------------------------------------------------------------------
 # Outline:
 #
@@ -57,9 +55,7 @@ matplotlib.use('TkAgg')
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 # implement the default mpl key bindings
 from matplotlib.backend_bases import key_press_handler
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-import matplotlib.animation as mAnimation
 
 from pprint import pprint
 import tkinter as tk
@@ -72,7 +68,7 @@ import time
 # import re
 # import subprocess
 # import sys
-import os
+# import os
 from subprocess import Popen, PIPE
 
 # from PIL import Image, ImageTk#still buggy, needed for screenprinting only tk wind
@@ -424,16 +420,14 @@ class PySysMonitor_gui(tk.Frame):
                 commCheckButVar.set(1)
             else:
                 commCheckButVar.set(0)
-
-
-
+        restoreDefaults()
         # ===============================================================================
         # Create the buttons for the Bottom Bar:
         #       ACCEPT,             CANCEL,            DEFAULTS
         #       +--applyOptions                        +--restoreDefaults
         #
         # ===============================================================================
-        restoreDefaults()    # start off by loading the GUI fields with the default values
+           # start off by loading the GUI fields with the default values
 
         botButFrame = tk.Frame(optionsWindow)
         botButFrame.grid(column=1, row=6 ,columnspan=2,rowspan=1,sticky='')
@@ -450,12 +444,12 @@ class PySysMonitor_gui(tk.Frame):
 
     #----------------------------------------------------------------------------
     def open_singleProcProp(self):
-    #----------------------------------------------------------------------------
-    # Purpose: To bring up the popup PROCESS PROPERTIES display.
-    #    When the user clicks on the PROC_PROP button, the popup window will appear
-    #    where the user can custimize some options.
-    #  There is a CANCEL button at the bottom.
-    #----------------------------------------------------------------------------
+        #----------------------------------------------------------------------------
+        # Purpose: To bring up the popup PROCESS PROPERTIES display.
+        #    When the user clicks on the PROC_PROP button, the popup window will appear
+        #    where the user can custimize some options.
+        #  There is a CANCEL button at the bottom.
+        #----------------------------------------------------------------------------
         procPropWind = tk.Toplevel()
         procPropWind.title('PySysMonitor - Process Properties')  # yep
         # width,height, xPos, yPos = [450,150,150,120]
@@ -810,7 +804,7 @@ class PySysMonitor_gui(tk.Frame):
             for graphPID in self.pids2graph.keys():
 
                 if graphPID in self.pidDict.keys():
-                    self.plvTree.item(pidVal, tag='2bGraphed')
+                    self.plvTree.item(graphPID, tag='2bGraphed')
                 # end if
             # end loop
 
@@ -877,7 +871,7 @@ class PySysMonitor_gui(tk.Frame):
         matplotFrame.pack(side='left', fill='both', expand=1)
 
             # Format plt-fig-axes layout
-        fig,(axCPU,axMem) = plt.subplots(2, sharex=True, sharey=False)#3,sharex='col',sharey='row'
+        fig,(axCPU,axMem) = plt.subplots(2, sharex='all', sharey='none')#3,sharex='col',sharey='row'
         #axArr=(axCPU,axMem) #column
 
         plt.subplots_adjust(left=0.07, bottom=0.15, right=0.98, top=0.88, wspace=None, hspace=None)
@@ -1087,7 +1081,7 @@ class PySysMonitor_gui(tk.Frame):
                        # load the timeQueue record
                        #self.timeQueue[ self.tail_newest ] [0:3] =  timeRec[0:3] 
                        print ("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww")
-                       print("   wordList array: ", wordList);
+                       print("   wordList array: ", wordList)
                        print ("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww")
 
                        # SAVE Latest times to our Queue record ===> save
@@ -1107,11 +1101,11 @@ class PySysMonitor_gui(tk.Frame):
 
                    # 6) GRAPHICS: Set up the Title, and X,Y Lables 
 
-                   self.ax.clear()    # clear previous lines from GUI
+                   self.axCPU.clear()    # clear previous lines from GUI
 
-                   self.ax.set_title('PID = ' + str(self.ActivePIDbeingGraphed_i) )  # Title of Graph.  Centered.  Above Graph.
-                   self.ax.set_ylabel('percent CPU -Ylabel')             # Title of Left   (Y) 
-                   self.ax.set_xlabel('Elapsed Time(s)')                 # Title of Bottom (X) 
+                   # self.ax.set_title('PID = ' + str(self.ActivePIDbeingGraphed_i) )  # Title of Graph.  Centered.  Above Graph.
+                   # self.ax.set_ylabel('percent CPU -Ylabel')             # Title of Left   (Y)
+                   # self.ax.set_xlabel('Elapsed Time(s)')                 # Title of Bottom (X)
 
 
                    # 7) Create an array of X values (to plot the time in elapsed seconds)
@@ -1143,7 +1137,7 @@ class PySysMonitor_gui(tk.Frame):
                       
                       # Get value from queue
                       CurVal_f = self.timeQueue [ i ]['pcpu']
-                      print( i, ": ", self.timeQueue[i] );
+                      print( i, ": ", self.timeQueue[i] )
          
                       # Y GRAPH:  Load value into Graph list
                       y1 [ GRAPH_index ] = CurVal_f
@@ -1156,7 +1150,7 @@ class PySysMonitor_gui(tk.Frame):
                       # bump down to next item in queue.
                       GRAPH_index = GRAPH_index -1
                       if (i == 0):
-                         i=self.Q_size -1;              # reached queue bottom, so wrap around to the top
+                         i=self.Q_size -1              # reached queue bottom, so wrap around to the top
                       else: 
                          i = (i - 1)
                    # end loop    
@@ -1180,14 +1174,14 @@ class PySysMonitor_gui(tk.Frame):
                       # if the Max value is above 0.3 set the Y value to an increments of 0.1
                       intDivideByTenths      = int ( MaxVal_f / 0.1)              # 0.5 becomes (0.5/ 0.1) = 5
                       intRoundedDownByTenths_f = float ( intDivideByTenths * 0.1) #    5*0.1 become 0.5
-                      YfinalScale_f   = intRoundedDownByTenths_f+f + 0.1          #    0.5 + 0.1 => 10 is the scale
+                      YfinalScale_f   = intRoundedDownByTenths_f + 0.1          #    0.5 + 0.1 => 10 is the scale
                       Yincrements_f   = 0.1
                    else:
                       YfinalScale_f   = MaxVal_f
                       Yincrements_f   = 0.1
                    # end if.  The scale is now in "YfinalScale".
 
-                   print("         +++++ Y SCALE:  ", YfinalScale_f, "  ++++++++++++" );
+                   print("         +++++ Y SCALE:  ", YfinalScale_f, "  ++++++++++++" )
 
                    # 10) GRAPHICS:  Send X,Y data out to be graphed. 
                    print ("Go DRAWa ====================")
@@ -1195,20 +1189,20 @@ class PySysMonitor_gui(tk.Frame):
                    ########self.canvas.delete("plot")
                    # Python Note:   X is ALWAYS the first item set.
                    # self.ax.xlim(0.0, YfinalScale)       # <== invalid. if not used, self scaling is automatically used.
-                   self.ax.plot(x1, y1)                   # Plot the X (t)  and Y (s) values
+                   self.axCPU.plot(x1, y1)                   # Plot the X (t)  and Y (s) values
 
                    # TEST ======================
                    y2 = np.zeros(300)  # Second Item (Y)  array of 300 with values zeroed out
                    y2[200:250] = y1[250:300]
-                   self.ax.plot(x1, y2)  # Plot the X (t)  and Y (s) values
+                   self.axCPU.plot(x1, y2)  # Plot the X (t)  and Y (s) values
 
                    y3 = np.zeros(300)  # Second Item (Y)  array of 300 with values zeroed out
                    y3[150:200] = y1[250:300]
-                   self.ax.plot(x1, y3)  # Plot the X (t)  and Y (s) values
+                   self.axCPU.plot(x1, y3)  # Plot the X (t)  and Y (s) values
 
                    y4 = np.zeros(300)  # Second Item (Y)  array of 300 with values zeroed out
                    y4[100:150] = y1[250:300]
-                   self.ax.plot(x1, y4)  # Plot the X (t)  and Y (s) values
+                   self.axCPU.plot(x1, y4)  # Plot the X (t)  and Y (s) values
 
                    # TEST ======================
 
