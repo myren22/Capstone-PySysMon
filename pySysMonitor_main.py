@@ -65,7 +65,7 @@ import numpy as np
 import time
 # from tkinter import *
 # from tkinter.ttk import *
-# import re
+import re
 # import subprocess
 # import sys
 # import os
@@ -140,35 +140,6 @@ class PySysMonitor_gui(tk.Frame):
         # ---- New pidQinfo (start)----------------------
         self.firstRun=True
         self.psCompleteDict={} #dict of all ps's, keyword pid
-        self.MaxPids2Graph = 5
-        self.pidQinfo = np.zeros(self.MaxPids2Graph,
-                         dtype={'names': ['active', 'pid', 'Qhead', 'Qtail'],
-                                'formats': ['i8', 'i8', 'i8', 'i8']})
-        self.pidQinfo[0]["active"] = 0  # 0 = not being tracked,  1=being tracked
-        self.pidQinfo[0]["Qhead"] = int(1)
-        # ---- New pidQinfo (end) ----------------------
-
-        # ----- new  pids2graph (start) -------------
-        self.pids2graph={}
-        self.lbSelected=None
-        # ----- new  pids2graph (end) -------------
-
-
-        # self.timeQueue = [None] * self.Q_size;dd
-
-        #self.timeQueue = np.dtype(('str', (300,5) ))
-        self.timeQueue = np.zeros ( self.Q_size,
-                           dtype = { 'names'   :['timestamp','pid','pcpu','pmem','str40'],
-                                     'formats' :[       'f8', 'f8',  'f8',  'f8',  'a40'] } )
-        # ---- New timeQueue for multiple pids (start) ----------------------
-
-
-        self.timeQueue2 = np.zeros((self.MaxPids2Graph,
-                               self.Q_size),
-                                dtype={'names'  : ['timestamp', 'pid', 'pcpu', 'pmem', 'str40'],
-                                       'formats': ['f8', 'f8', 'f8', 'f8', 'a40'] } )
-        self.timeQueue2[0, 0]["timestamp"] = int(2)
-        # ---- New timeQueue for multiple pids (end) ----------------------
 
         # run create gui methods
         self.create_widgets() #
@@ -450,7 +421,7 @@ class PySysMonitor_gui(tk.Frame):
         #end of open_optionsWindow
 
     #----------------------------------------------------------------------------
-    def open_singleProcProp(self, pidVal):
+    def open_singleProcProp(self, pidStr):
         #----------------------------------------------------------------------------
         # Purpose: To bring up the popup PROCESS PROPERTIES display.
         #    When the user clicks on the PROC_PROP button, the popup window will appear
@@ -463,21 +434,37 @@ class PySysMonitor_gui(tk.Frame):
         # procPropWind.geometry('%dx%d+%d+%d' % (width,height, xPos, yPos))
 
         # ===============================================================================
-        # Create some Option fields where the user can enter data.
-        # ===============================================================================
-        # titleLabel = tk.Label(procPropWind, text='Process Properties')
-        # titleLabel.grid(column=1, row=1 ,columnspan=2,rowspan=1,sticky='')
+        #  Run terminal commands to get any unknown data
+        # ====
+        thisProcDict=[]
+        fixedList = ['SystemTime', 'UserTime', 'Priority', 'ActiveStatus', ]
         #
-        # lab1Des  = tk.Label(procPropWind, text='').grid(row=2, column=1)
-        # lab1Data = tk.Label(procPropWind).grid(row=2, column=2)
+        # fixedList = ['pid', 'name', 'ppid', 'parentName', 'uid', 'user name', 'start time', 'args']
 
+        #process=Popen(['ps', '-p','10776','-o', 'pid,pcpu'], stdout=PIPE, stderr=PIPE)
+        # strWords='ppid,uid,user,start_time'
+        # for()
+        # process = Popen(['ps', '-p',pidStr,'-o','user='], stdout=PIPE, stderr=PIPE)
+        #
+        # stdout,_= process.communicate()
+        # strAsc = stdout.decode('ascii', 'ignore')
+        # print('time:', time.time())
+        # ===============================================================================
+
+        #pid,name,ppid,uid,user,start_time
+        #args
+
+        #'parentName'
+        listLabels=[]
         tk.Label(procPropWind, text='Fixed Properties').grid(row=0, column=1, columnspan=2)
-        fixedList=['pid', 'name', 'ppid', 'parentName', 'uid', 'user name', 'start time', 'args']
+        fixedList=['pid', 'name', 'ppid', 'uid', 'user name', 'start time', 'args']
         # fixedList = ['pid', 'name', 'uid', 'user']
         for i in range(0,len(fixedList)):
             tk.Label(procPropWind, text=fixedList[i]).grid(row=i+1, column=1,sticky='E')
             # strData = self.psCompleteDict[pidVal][fixedList[i]]
-            tk.Label(procPropWind, text='--IN Progress--').grid(row=i+1, column=2,sticky='E')
+            aLabel =tk.Label(procPropWind, text='--IN Progress--')
+            aLabel.grid(row=i+1, column=2,sticky='E')
+            listLabels.append(aLabel)
 
         tk.Label(procPropWind, text='Variable Properties').grid(row=15, column=1,columnspan=2)
         fixedList = ['SystemTime','UserTime','Priority','ActiveStatus', ]
@@ -485,16 +472,42 @@ class PySysMonitor_gui(tk.Frame):
         for i in range(0, len(fixedList)):
             tk.Label(procPropWind, text=fixedList[i]).grid(row=i+20, column=1,sticky='E')
             # strData = self.psCompleteDict[pidVal][fixedList[i]]
-            tk.Label(procPropWind, text='--IN Progress--').grid(row=i+20, column=2,sticky='E')
+            aLabel = tk.Label(procPropWind, text='--IN Progress--')
+            aLabel.grid(row=i+20, column=2,sticky='E')
+            listLabels.append(aLabel)
 
 
+        listArgs=['pid','comm','ppid','uid','user','start_time','args',   'cputime','etime', 'priority']
+        listWords=[]
+        for arg in listArgs:
+            process = Popen(['ps', '-p', pidStr, '-o', arg+'='], stdout=PIPE, stderr=PIPE)
+            stdout, _ = process.communicate()
+            strAsc = stdout.decode('ascii', 'ignore')
+            strAsc=strAsc.rstrip()
+            listWords.append(strAsc)
+        print('')
+        # ==  Set Labels to display info ========
+        listLabels[0]['text'] =   listWords[0]
+        listLabels[1]['text'] =   listWords[1]
+        listLabels[2]['text'] =   listWords[2]
+        listLabels[3]['text'] =   listWords[3]
+        listLabels[4]['text'] =   listWords[4]
+        listLabels[5]['text'] =   listWords[5]
+        listLabels[6]['text'] =   listWords[6]
+        listLabels[7]['text'] =   listWords[7]
+        # listLabels[8] =   listWords[0]
+        # listLabels[9] =   listWords[0]
+        # listLabels[10] =   listWords[0]
+        # listLabels[11] =   listWords[0]
+        # listLabels[12] =   listWords[0]
+        # listLabels[13] =   listWords[0]
+        # listLabels[14] =   listWords[0]
 
 
 
         # ===============================================================================
         # Create the buttons for the Bottom Bar:
-        #                    CANCEL
-        #
+        #                    CANCEL        #
         # ===============================================================================
         cancelBut = tk.Button(procPropWind, text='Cancel', command=lambda: procPropWind.destroy())
         cancelBut.grid(row=100, column=1, columnspan=2)
@@ -531,8 +544,8 @@ class PySysMonitor_gui(tk.Frame):
         self.lbSelected = tk.Listbox(listscrolFrame, height=200)
         self.lbSelected.pack(side=tk.TOP, fill=tk.BOTH)
 
-        for i in range(100):
-            self.lbSelected.insert(tk.END, 'a' + str(i) + 'c')
+        # for i in range(100):
+        #     self.lbSelected.insert(tk.END, 'a' + str(i) + 'c')
 
         def togVis():
             # get entry value
@@ -550,27 +563,36 @@ class PySysMonitor_gui(tk.Frame):
             print('tog vis')
 
         def remove():
-            self.lbSelected.delete(tk.ANCHOR)
+            curVal=self.lbSelected.get(tk.ANCHOR)
+            if curVal != '':
+                self.togTrackedPID(curVal)
+
 
         #
         def singClikLsbx(event):
-            a0 = self.lbSelected.curselection()  # this gets changed between click and release events #tuple of selection
-            a3 = self.lbSelected.get(tk.ANCHOR)  # same as above. val is that is box clicked. #init state is ''
-            a1 = self.lbSelected.get(
-                tk.ACTIVE)  # this gets changed after release events #val of active #init state is first listbox
+            #idk what my plan for this guy is
+            pass
+            # a0 = self.lbSelected.curselection()  # this gets changed between click and release events #tuple of selection
+            # a3 = self.lbSelected.get(tk.ANCHOR)  # same as above. val is that is box clicked. #init state is ''
+            # a1 = self.lbSelected.get(tk.ACTIVE)  # this gets changed after release events #val of active #init state is first listbox
 
-            aLabel2['text'] = str()
-            a2 = 2
+            # aLabel2['text'] = str()
 
         def doubClikLsbx(event):
-            self.lbSelected.delete(tk.ANCHOR)
             print('dub click')
+
+        def singRighClik(event):
+            curVal=self.lbSelected.get(tk.ANCHOR)
+            print('right click. pidStr=',curVal)
+            if(curVal != ''):
+                self.open_singleProcProp(curVal)
+
 
         togVisibBut['command'] = togVis
         remTrakBut['command'] =  remove
         self.lbSelected.bind("<Double-Button-1>", doubClikLsbx)
         self.lbSelected.bind("<ButtonRelease-1>", singClikLsbx)
-
+        self.lbSelected.bind("<ButtonRelease-3>", singRighClik)
         # attach listbox to scrollbar
         self.lbSelected.config(yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.lbSelected.yview)
@@ -652,33 +674,6 @@ class PySysMonitor_gui(tk.Frame):
         # returns  New
         #----------------------------------------------------------------
 
-        # #--------------------------------------------------------
-        # def acceptAndGraphPID():
-        #     #--------------------------------------------------------
-        #     # User has pressed the ACCEPT button and desires to have
-        #     #   the  PID he has entered to be graphed.
-        #     #--------------------------------------------------------
-        #     PIDid = self.PID_GuiScratchpad.get()     # PID user has entered at the GUI
-        #     # print ('------------------------------------------------------------------')
-        #     # print ('>>>>>>>>>>>> create_procListViewFrameGUI:  ACCEPT(ProcessLIST):   Verifying PIDid', PIDid)
-        #     # print ('------------------------------------------------------------------')
-        #     PIDstr = str(PIDid)
-        #
-        #     if PIDstr in self.psCompleteDict:
-        #
-        #
-        #
-        #     # if (len(rowDataForPID) < 3):
-        #     #    print('   NO Data for what appears to be a VALID PID: Will not graph')
-        #     # else:
-        #     #    # Yay! PIDid is valid (there is valid data for it in the list).
-        #     #    # Go graph it.
-        #     #    self.PID_ReqToBeGraphed_i = int(PIDid)          # Send this new PID to the graphics
-        #     #    print('   Sending   PID_ReqToBeGraphed_i:  ', self.PID_ReqToBeGraphed_i)
-        #     #    print('   VALID PID ===> self.raiseFrame( timeGraph)')
-        #     #    self.raiseFrame('timeGraph')
-        # # end acceptAndGraphPID --------------------------------
-
         enabledColumns = ['PID', 'CPU%', 'RAM%', 'User', 'Process Name']  # Column Titles displayed at Top of Table.
         plvFrame = ttk.Frame(parent)
         plvFrame.pack(fill='both', expand=True)
@@ -697,24 +692,6 @@ class PySysMonitor_gui(tk.Frame):
         plvFrame.grid_columnconfigure(0, weight=1)
         plvFrame.grid_rowconfigure(   0, weight=1)
 
-
-        # # -------------- Bottom Right -----------------------------------
-        # # 4:                 PID ID         :  ____####_____
-        # # 5:                 ACCEPT_BUTTON
-        # # ---------------------------------------------------------------
-        # pidEntryFrame = tk.Frame(plvFrame)
-        # pidEntryFrame.grid(column=0, row=4,columnspan=2, sticky='N')
-        # PIDLabel  =  tk.Label(pidEntryFrame, text='PID to Graph:')
-        # PIDLabel.grid(row=1,column=1)  # right justify (e)
-        # self.PID_GuiScratchpad  = tk.Entry(pidEntryFrame)
-        # self.PID_GuiScratchpad.grid(row=1,column=2)
-        #
-        # # # When ACCEPT button pressed call --> acceptAndGraphPID
-        # # acceptPIDBut   = tk.Button(pidEntryFrame,text='Accept',command=acceptAndGraphPID)
-        # # acceptPIDBut.grid(row=1, column=3)
-
-
-
         #build tree
         for col in enabledColumns:
             plvTree.heading(col, text=col, command=lambda c=col: self.columnSort(plvTree, c, 0))
@@ -728,8 +705,6 @@ class PySysMonitor_gui(tk.Frame):
            val = plvTree.focus()
            print(val)#tree item id
            print('itemText',plvTree.item(val)['text'])
-           # self.PID_GuiScratchpad.delete(0, tk.END)
-           # self.PID_GuiScratchpad.insert(tk.END, plvTree.item(val)['text'])
 
         #------ Right Click -----------
         def myRightClickEvent(event):
@@ -737,12 +712,9 @@ class PySysMonitor_gui(tk.Frame):
             if plvTree.focus() !='':
                 iidOfTree = plvTree.focus()  # get row
                 dictOfRow = plvTree.item(iidOfTree)
-                pidRow = dictOfRow['values']
-                self.open_singleProcProp(pidRow)
+                self.open_singleProcProp(str(iidOfTree))
                 print(iidOfTree)
                 print(self.psCompleteDict[iidOfTree])
-
-
 
         plvTree.bind("<Button-3>", myRightClickEvent)
 
@@ -750,33 +722,17 @@ class PySysMonitor_gui(tk.Frame):
         def myEventDoubleClick(event):
             print ("============plvTree: Double Left click event =========================")
             #toggle tag,
-            # self.plvTree.tag_configure("selected", background='green')
             # if in tree, remove it.  If not in tree, add it
-
-
-            iidOfTree = plvTree.focus()  # get row
+            iidOfTree = plvTree.focus()  #getRow, is str pidVal
             dictOfRow = plvTree.item(iidOfTree)
-            pidRow = dictOfRow['values'][0]
-            tagState = self.psCompleteDict[iidOfTree]['ourState']
+            pidRow = dictOfRow['values'][0]     #  int pidVal
 
-            if self.psCompleteDict[iidOfTree]['tracked']=='tracked':
-                #  remove
-                self.psCompleteDict[iidOfTree]['tracked']='notTracked'
-                # del self.pids2graph[pidRow]
-                plvTree.item(iidOfTree, tag=[tagState,'notTracked'])
-            else:
-                #  add (but make sure not passed max)
-                self.psCompleteDict[iidOfTree]['tracked'] = 'tracked'
-                # self.pids2graph[pidRow]=pidRow
-                self.lbSelected.insert(tk.END, pidRow)
-                plvTree.item(iidOfTree, tag=[tagState,'tracked'])
+            pidStr=iidOfTree
+            pidInt=pidRow
 
-            pid_count = len(self.pids2graph)
-            print ("new PID count = ", pid_count)
+            self.togTrackedPID(pidInt)
 
 
-            # self.PID_GuiScratchpad.delete(0, tk.END)
-            # self.PID_GuiScratchpad.insert(tk.END, pidRow)
 
 
         plvTree.bind("<Double-Button-1>", myEventDoubleClick)
@@ -908,8 +864,9 @@ class PySysMonitor_gui(tk.Frame):
                 #for first runs of periodicUpdateProcIDList save the top 10.
                 if self.firstRun and i<11:
                     self.psCompleteDict[keyPIDcomm]['tracked']='tracked'
+                    self.lbSelected.insert(tk.END,wordList[0])
 
-
+            toDelete=[]
             for key in self.psCompleteDict.keys():
                 # check if key, and therefore entry exists in tree
                 # insert if not
@@ -917,7 +874,8 @@ class PySysMonitor_gui(tk.Frame):
                     if self.psCompleteDict[key]['ourState']>3 and self.psCompleteDict[key]['tracked'] !='tracked':
                         #remove old ps from tree and dict
                         self.plvTree.delete(key)
-                        # del self.psCompleteDict[key]
+                        toDelete.append(key)
+
                         continue
                     #update values if proc still alive
                     self.plvTree.item(key, values=self.psCompleteDict[key]['plvValues'])
@@ -932,72 +890,11 @@ class PySysMonitor_gui(tk.Frame):
 
                 #age goes from new=-3, active=0, old=3+
 
+            for key in toDelete:
+                del self.psCompleteDict[key]
 
 
-            # #   Using our list of PIDS 2 be Graphed, Tag the pertinent PIDS in the PidDict
-            #
-            #
-            # # Redraw our GUI table.
-            # # delete current GUI contents
-            # self.plvTree.delete(*self.plvTree.get_children())
-            # # create a new GUI table
-            #
-            # for dictKey in self.pidDict.keys():
-            #     # self.plvTree.delete('')
-            #     listEntries = self.pidDict[dictKey]
-            #     # listEntries = str(dictEntry).split()
-            #     self.plvTree.insert('','end',iid=dictKey, text=dictKey,values=(listEntries))
-            #     #                    1    2    ========== keywords =============================
-            #     # 1 - parent   ('' means no parent)
-            #     # 2 - position in parent ('end' means last position)
-            #     # KEYWORDS:
-            #     #    iid       item identifies
-            #     #    text      item text
-            #     #    values    values to put into table
-            #     #    tags
-            #     #### Later can use      self.plvTree.tag_configure("selected", background='green')
-            #
-            #     # ---- TEST BELOW ----
-            #     ###self.plvTree.item()
-            #     ###self.plvTree.item( self.plvTree.identify_row(), tags=("bold", 'red'))   #<---------------------- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-            #     # ---- TEST ABOVE  ----
-            #     # self.pidDict[str(wordList[0])])
-            #     # result = self.plvTree.identify_row(i)
-            #     # childr = self.plvTree.get_children()
-            # # print('plvTree children:',self.plvTree.get_children)
-            #
-            # # for each PID to be graphed....add tag "2bGraphed" in the plvTree
-            # for graphPID in self.pids2graph.keys():
-            #
-            #     if graphPID in self.pidDict.keys():
-            #         self.plvTree.item(graphPID, tag='2bGraphed')
-            #     # end if
-            # # end loop
-            #
-            # # Highlight in green each process to be graphed.
-            # self.plvTree.tag_configure('2bGraphed', background='green')
-            #
-            # # pidCo
-            # # for rowEntry in self.plvTree['PID']:
-            # #     pass
-            #
-            #
-            # #ky--
-            # #for all pids in pid column, update the other columns.
-            #     #if column pid found in procList, update value. reset any highlights
-            #         #remove pid from procList
-            #     #if pid in column not found in current procList, highlight it
-            # #for all pids remaining in procList
-            #     #insert value on column and highlight
-            # # for treeEntryPID in self.plvTree:
-            # #     pass
-            #
-            # #run column sort
             self.columnSort(self.plvTree)
-            # if(self.desigCol is None):
-            #     self.columnSort(self.plvTree, 'RAM%', 1)
-            # else:
-            #     self.columnSort(self.plvTree)
 
             if (wordList[0] == '4139'):
                 a1 = self.psCompleteDict[keyPIDcomm]
@@ -1009,7 +906,7 @@ class PySysMonitor_gui(tk.Frame):
         # print('bool is:'+str(self.boolTakeInData))
 
         self.firstRun=False
-        self.periodicUpdateOfGraphNEW()
+        self.periodicUpdateOfGraph()
         self.after (self.updateIntervalMS, self.periodicUpdateProcIDList)        # -------> periodic update
 
 
@@ -1111,7 +1008,8 @@ class PySysMonitor_gui(tk.Frame):
         #end create_timeGraphContentsGUI
 
     # -----------------------------------------------------------------------------
-    def periodicUpdateOfGraphNEW(self):
+    def periodicUpdateOfGraph(self):
+
 
 
         # axCPU
@@ -1159,305 +1057,24 @@ class PySysMonitor_gui(tk.Frame):
                 self.axCPU.plot(xTime,yCpuPer,'-o',label=linelabel,picker='5')
                 self.axMem.plot(xTime, yMemPer,'-o', label=linelabel)
 
+
         handles, labels = self.axCPU.get_legend_handles_labels()
+
+
+        print('')
+        for aHandle in handles:
+            aColor=aHandle.get_color()
+
+            aLabel=aHandle.get_label()
+            intPid = int(re.search(r'\d+', aLabel).group())
+
+            index = self.lbSelected.get(0, "end").index(str(intPid))
+            hexVal=matplotlib.colors.to_hex(aColor)
+            self.lbSelected.itemconfig(index,background=hexVal)
+
         self.axCPU.legend(handles, labels)
         self.canvas.show()
 
-    # -----------------------------------------------------------------------------
-
-
-
-    # #-----------------------------------------------------------------------------
-    # def periodicUpdateOfGraph(self):
-    # #-----------------------------------------------------------------------------
-    # # Purpose:  This method is called periodically.  It does a Linux command
-    # #        and processes the linux output, filtering and organizing the data.
-    # #        and displaying filtered results in a table.
-    # #-----------------------------------------------------------------------------
-    #     # print('Graph update')
-    #     if(self.boolTakeInData): #for some reason this isn't getting the memo when pause is pressed.
-    #
-    #
-    #
-    #
-    #         # 1) New different PID: See if user requested us to change the PID we are recording, and switch if necessary.
-    #         reqPID = str(self.PID_ReqToBeGraphed_i)     # PID user has entered at the GUI
-    #
-    #         if ( reqPID >= str(0) ):        # str() vs int
-    #             # Yes, this is a new new requested PID
-    #             print ('(((((((((( GRAPH:Verifying reqPID', reqPID, ' )))))))))))))))))'  )
-    #             reqPIDstr = str(reqPID)
-    #
-    #             rowDataForPID = {}
-    #             # verify the PID actually exists
-    #             try:
-    #               rowDataFor_reqPID = self.pidDict[reqPIDstr]
-    #             except:
-    #                 print(    'NOT VALID reqPIDstr:', reqPIDstr)
-    #
-    #             if (len(rowDataFor_reqPID) < 3):
-    #                 print('   NO Data for what appears to be a VALID PID: Will not graph')
-    #             else:
-    #                 # Yay! PIDid is valid (there is valid data for it in the list).
-    #                 # We will switch over the GRAPH mode and graph it.
-    #                 self.ActivePIDbeingGraphed_i = int(reqPIDstr)    # New PID to be graphed.
-    #                 self.PID_ReqToBeGraphed_i    = int(-1)           # clear request
-    #
-    #                 # use new Requested PID. and clear old data (by setting the queues head = tail)
-    #                 print("----------------- CLEARING QUEUES --------------------------------")
-    #                 print("----------------- CLEARING QUEUES --------------------------------")
-    #                 print("----------------- CLEARING QUEUES --------------------------------")
-    #                 self.ActivePIDbeingGraphed_i = int(reqPID)
-    #                 self.head_oldest = self.tail_newest
-    #
-    #
-    #                 # switch over the GRAPH mode (if we are not in GRAPH mode)
-    #                 print("   VALID PID ===> Switching to graph mode:  self.raiseFrame( timeGraph)")
-    #                 self.raiseFrame('timeGraph')   # ----> exit
-    #
-    #         # Normal processing:
-    #         #   Gather data on any valid process requested.   We gather data whether or not we are in
-    #         #   graphics mode.    That way when the user switches to graphics mode we already have data.
-    #
-    #         # ---------- For Reference when using the queues ------------------------------------
-    #         # self.Q_size      = 300
-    #         # self.head_oldest =   1    # front of Queue. If other data is added, this is the oldest data.
-    #         # self.tail_newest =   1    # end of Queue.  Items get in line here.  Has the newest data.
-    #
-    #         # Save Newest data to Queue
-    #         timestamp   = time.time()
-    #         timestamp_f = float(timestamp)
-    #         timestamp_str = str(timestamp)
-    #         timestamp2  = time.gmtime(time.time() )
-    #         print('Gtime:  time (',  timestamp,  ')  timestamp2(' , timestamp2, ')' )
-    #
-    #         print('a > b :  a = ', self.ActivePIDbeingGraphed_i, ' b = ', str(0) )
-    #
-    #         # 3) make sure PID is valid
-    #         #if (self.ActivePIDbeingGraphed_i >= 0 ):
-    #         pid_count = len(self.pids2graph)
-    #         if pid_count > 0:
-    #             # We can gather data for this ID
-    #             print ("Gather data for activeID:", self.ActivePIDbeingGraphed_i)
-    #             pid_count = len(self.pids2graph)
-    #             if pid_count > 0:
-    #                 secondParam_str = '-q'
-    #                 pid_count = len(self.pids2graph)
-    #                 isFirst = bool(1)
-    #                 # loop through keys
-    #                 for graphPID in self.pids2graph.keys():
-    #                     if isFirst:
-    #                         secondParam_str += str(graphPID)     # -q2
-    #                         isFirst = bool(0)
-    #                     else:
-    #                         secondParam_str += "," + str(graphPID)    # -q2,4
-    #                 # end loop
-    #             # end if
-    #
-    #             #secondParam_str = '-q' + str(self.ActivePIDbeingGraphed_i)
-    #
-    #             print ('secondParam:(', secondParam_str, ')' )
-    #             #  command: "ps -q2,4,6 -o pid,pcpu,pmem,user,comm,cmd"
-    #             #  where:     q# = query for given process it
-    #             #           pid  = Process ID
-    #             #           pcpu = Percentage CPU utilization
-    #             #           pmem = Percentage Memory utilization
-    #             #           user = User Name
-    #             #           comm = Command being executed
-    #             #           cmd  = full long version of command
-    #             # "--sort=-pcpu" = Sort data based on percentage CPU utilization
-    #             #
-    #             #                "ps    -Ao    pid,pcpu,pmem,user,comm,cmd    --sort=-pcpu"
-    #
-    #             process = Popen(['ps', secondParam_str, '-o', 'pid,pcpu,pmem,user,comm,cmd'], stdout=PIPE, stderr=PIPE)
-    #             stdout,_= process.communicate()
-    #
-    #             i = -1
-    #
-    #             # 4) SAVE latest data to Queue.
-    #             #    Parse through linux returned list of lines, and extract and save pertent items.
-    #             for line in stdout.splitlines():
-    #                 i = i + 1
-    #                 print ('Gline(', i, ')', line)   ## Debug: line read in.
-    #                 if (i == 0):
-    #                    continue    # ---> skip the first line (it is a title line)
-    #
-    #                 type(line)
-    #                 decodeLine = line.decode('ascii', 'ignore')
-    #                 #                                  ^^^^^^
-    #                 #                                  ignore is used to not fail on unicode names (like web items from firefox)
-    #
-    #                 wordList = decodeLine.split()        # wordList has a list created from the items in the line
-    #                 print('spliting word list', wordList)
-    #
-    #                 # ------------------- sample result ---------------------------------------------
-    #                 #   Gline( 0 ) b'  PID %CPU %MEM USER     COMMAND         CMD'
-    #                 #   Gline( 1 ) b' 4716 19.7  2.1 kmyren   python3         python3 ks.py'
-    #                 #                   0    1    2   3         4               5
-    #                 #   spliting word list ['4716', '19.7', '2.1', 'kmyren', 'python3', 'python3', 'ks.py']
-    #                 # ------------------- sample result ---------------------------------------------
-    #
-    #                 # ------------------ what we want to load into our record -----------------
-    #                 # self.timeQueue[x].
-    #                 #                   [0] timestamp
-    #                 #                   [1] pid
-    #                 #                   [2] pcpu
-    #                 #                   [3] pmem
-    #                 # ------------------ what we want to load into our record -----------------
-    #
-    #                 # 5) VALID data: then SAVE latest data to Queue.
-    #                 if( len(wordList) >= 4 ):
-    #                     # load Record
-    #                     #timeRec [0] = timestamp_str # 0 timestamp
-    #                     #timeRec [1] = wordList[1]   # 1 pid
-    #                     #timeRec [2] = wordList[2]   # 2 pcpu
-    #                     #timeRec [3] = wordList[3]   # 3 pmem
-    #
-    #                     # ---------------- Queue format -----------------------------------
-    #                     #  self.Q_size      = 300
-    #                     #  self.head_oldest =   1    # front of Queue. If other data is added, this is the oldest data.
-    #                     #  self.tail_newest =   1    # end of Queue.  Items get in line here.  Has the newest data.
-    #                     # -----------------------------------------------------------------
-    #                     self.tail_newest = (self.tail_newest + 1) % self.Q_size       # where % = modulo function
-    #                     if ( self.tail_newest == self.head_oldest):
-    #                         # bumped into itself.  Increment head (with the oldest stuff up one)
-    #                         self.head_oldest = (self.head_oldest + 1) % self.Q_size   # where % = modulo function
-    #
-    #                     # print ('Queue:  head_oldest=', self.head_oldest, '  tail_newest=', self.tail_newest)  # Debug Queu Head and Tail
-    #                     print ("=====> SAVING ', ,' to NEW TO TAIL (", self.tail_newest, ")         Note: Head is (", self.head_oldest, ")" )
-    #                     # load the timeQueue record
-    #                     #self.timeQueue[ self.tail_newest ] [0:3] =  timeRec[0:3]
-    #                     print ("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww")
-    #                     print("   wordList array: ", wordList)
-    #                     print ("wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww")
-    #
-    #                     # SAVE Latest times to our Queue record ===> save
-    #                     self.timeQueue[ self.tail_newest ] ['timestamp'] = float(timestamp)
-    #                     self.timeQueue[ self.tail_newest ] [      'pid'] = float(wordList[0] )  # 1 pid
-    #                     self.timeQueue[ self.tail_newest ] [     'pcpu'] = float(wordList[1] )  # 2 pcpu
-    #                     self.timeQueue[ self.tail_newest ] [     'pmem'] = float(wordList[2] )  # 3 pmem
-    #
-    #                     # -------------- record struct ----------------------------------------------------------
-    #                     #   self.timeQueue = np.zeros ( self.Q_size,
-    #                     #                      dtype = { 'names'   :['timestamp','pid','pcpu','pmem','str40'],
-    #                     #                                'formats' :[       'f8', 'f8',  'f8',  'f8',  'a40'] } )
-    #                     # -------------- record struct ----------------------------------------------------------
-    #                 # end if
-    #
-    #
-    #
-    #                 # 6) GRAPHICS: Set up the Title, and X,Y Lables
-    #
-    #                 self.axCPU.clear()    # clear previous lines from GUI
-    #
-    #                 self.axCPU.set_title('PID = ' + str(self.ActivePIDbeingGraphed_i) )  # Title of Graph.  Centered.  Above Graph.
-    #                 self.axCPU.set_ylabel('percent CPU -Ylabel')             # Title of Left   (Y)
-    #                 self.axCPU.set_xlabel('Elapsed Time(s)')                 # Title of Bottom (X)
-    #
-    #
-    #                 # 7) Create an array of X values (to plot the time in elapsed seconds)
-    #                 #    Initialize zeroed  Y values (which we will fill in further below)
-    #
-    #                                                   # Python Note:   X is ALWAYS the first item set.
-    #                 x1 = np.arange (0, 300, 1)         # First Item  (X)  (From 0 to 300 by 1)
-    #                 y1 = np.zeros  (300)               # Second Item (Y)  array of 300 with values zeroed out
-    #
-    #                 # 8) Fill in the Y values with data that we do have.
-    #                 #    loop thru queue, and plot backwards in time.  Start at TAIL (latest data) and walk down
-    #                 #       until reaching the HEAD.   So we load the plot backwards:  299, 298, 297, ...
-    #                 GRAPH_index = self.Q_size -1     # 299
-    #
-    #                 HEAD_i   = int(self.head_oldest)
-    #                 TAIL_i   = int(self.tail_newest)
-    #                 i        = int(self.tail_newest)   # <--- Start at the TAIL (latest data) and plot left until reaching TAIL
-    #                 CurVal_f = float(0)
-    #                 CurNumOfEntries = 0
-    #                 MaxVal_f = float(0)
-    #                 for r in range (0, self.Q_size-1):
-    #                     # The above loop is simply to prevent runaway code.  We should get to the end before loop runs out
-    #                     # We will start with the latest (the tail) and plot BACKWARDS (going left) <------
-    #                     if ( i == HEAD_i):
-    #                         # started at TAIL and reached HEAD. exit
-    #                         print('Loop: Reached END. HEAD(', HEAD_i, ') == i(', i, 'Leaving loop with MAX(', MaxVal_f,
-    #                            ')  NumOfEntries(', CurNumOfEntries, ')  ----->')
-    #                         break     #  ----> exit loop
-    #
-    #                         # Get value from queue
-    #                         CurVal_f = self.timeQueue [ i ]['pcpu']
-    #                         print( i, ": ", self.timeQueue[i] )
-    #
-    #                         # Y GRAPH:  Load value into Graph list
-    #                         y1 [ GRAPH_index ] = CurVal_f
-    #                         print ( "GraphI: ", GRAPH_index, " = ", y1[ GRAPH_index] )
-    #
-    #                         if (CurVal_f > MaxVal_f):
-    #                             MaxVal_f = CurVal_f    # new Max Val
-    #
-    #                             CurNumOfEntries += 1
-    #                             # bump down to next item in queue.
-    #                             GRAPH_index = GRAPH_index -1
-    #                         if (i == 0):
-    #                             i=self.Q_size -1              # reached queue bottom, so wrap around to the top
-    #                         else:
-    #                             i = (i - 1)
-    #                 # end loop
-    #
-    #                 # 9) Calculate the Y SCALE to use, based on the "MaxVal" calculated above
-    #                 YfinalScale_f = 1.0
-    #                 Yincrements_f = 0.1
-    #                 if (MaxVal_f > 10):
-    #                     # if the Max value is above 5, set the Y value to an increments of 5.
-    #                     intDivideBy5 = int ( MaxVal_f / 5.0)            # 6  becomes (6/5) = 1
-    #                     intRoundedDownBy5   = int ( intDivideBy5 * 5)   #    1*5  become 5
-    #                     YfinalScale_f   = intRoundedDownBy5 + 5         #    5+5 => 10 is the scale
-    #                     Yincrements_f   = 5.0
-    #                 elif (MaxVal_f > 2):
-    #                     # if the Max value is above 2, set the Y value to an increments of 2.
-    #                     intDivideBy2 = int ( MaxVal_f / 2.0)            # 7  becomes (7/2) = 3
-    #                     intRoundedDownBy2   = int ( intDivideBy2 * 2)   #    3*2  become 6
-    #                     YfinalScale_f   = intRoundedDownBy2 + 2         #    6+2 => 8 is the scale
-    #                     Yincrements_f   = 1.0
-    #                 elif (MaxVal_f > 0.3):
-    #                     # if the Max value is above 0.3 set the Y value to an increments of 0.1
-    #                     intDivideByTenths      = int ( MaxVal_f / 0.1)              # 0.5 becomes (0.5/ 0.1) = 5
-    #                     intRoundedDownByTenths_f = float ( intDivideByTenths * 0.1) #    5*0.1 become 0.5
-    #                     YfinalScale_f   = intRoundedDownByTenths_f + 0.1          #    0.5 + 0.1 => 10 is the scale
-    #                     Yincrements_f   = 0.1
-    #                 else:
-    #                     YfinalScale_f   = MaxVal_f
-    #                     Yincrements_f   = 0.1
-    #                 # end if.  The scale is now in "YfinalScale".
-    #
-    #                 print("         +++++ Y SCALE:  ", YfinalScale_f, "  ++++++++++++" )
-    #
-    #                 # 10) GRAPHICS:  Send X,Y data out to be graphed.
-    #                 print ("Go DRAWa ====================")
-    #
-    #                 ########self.canvas.delete("plot")
-    #                 # Python Note:   X is ALWAYS the first item set.
-    #                 # self.ax.xlim(0.0, YfinalScale)       # <== invalid. if not used, self scaling is automatically used.
-    #                 # self.axCPU.plot(x1, y1)                   # Plot the X (t)  and Y (s) values
-    #                 #
-    #                 # # TEST ======================
-    #                 # y2 = np.zeros(300)  # Second Item (Y)  array of 300 with values zeroed out
-    #                 # y2[200:250] = y1[250:300]
-    #                 # self.axCPU.plot(x1, y2)  # Plot the X (t)  and Y (s) values
-    #                 #
-    #                 # y3 = np.zeros(300)  # Second Item (Y)  array of 300 with values zeroed out
-    #                 # y3[150:200] = y1[250:300]
-    #                 # self.axCPU.plot(x1, y3)  # Plot the X (t)  and Y (s) values
-    #                 #
-    #                 # y4 = np.zeros(300)  # Second Item (Y)  array of 300 with values zeroed out
-    #                 # y4[100:150] = y1[250:300]
-    #                 # self.axCPU.plot(x1, y4)  # Plot the X (t)  and Y (s) values
-    #
-    #                 # TEST ======================
-    #
-    #                 self.canvas.show()
-    #                 print ("Go DRAWb ====================")
-    #
-    #     # self.after  (self.updateIntervalMS, self.periodicUpdateOfGraph)        # -------> periodic update
-    # ## end periodicUpdateOfGraph(self):
 
     #-----------------------------------------------
     def toggleUpdate(self, aBool):
@@ -1465,7 +1082,6 @@ class PySysMonitor_gui(tk.Frame):
         # Toggle pause resume method
         #-----------------------------------------------
         self.boolTakeInData = aBool
-        # print('Update Data is:'+str(aBool))
     
     #-----------------------------------------------
     def raiseFrame(self, frameRaised):
@@ -1482,6 +1098,33 @@ class PySysMonitor_gui(tk.Frame):
         # save location is configurable in options window
         #-----------------------------------------------
         pass
+
+    # -----------------------------------------------
+    def togTrackedPID(self, pidInt):
+        # -----------------------------------------------
+        # change all GUIs that relate to this PID
+        #
+        # -----------------------------------------------
+        print ("=====      togTracked       ==========")
+
+        pidStr=str(pidInt)
+
+
+        tagState = self.psCompleteDict[pidStr]['ourState']
+
+        if self.psCompleteDict[pidStr]['tracked']=='tracked':
+            #  untrack
+            #update dict, plvTree and listbox on timegraph
+            self.psCompleteDict[pidStr]['tracked']='notTracked'
+            self.plvTree.item(pidStr, tag=[tagState,'notTracked'])
+            index = self.lbSelected.get(0, "end").index(pidStr)
+            self.lbSelected.delete(index)
+
+        else:
+            #  track
+            self.psCompleteDict[pidStr]['tracked'] = 'tracked'
+            self.lbSelected.insert(tk.END, pidStr)
+            self.plvTree.item(pidInt, tag=[tagState,'tracked'])
 
 
 # ----------------------- MAIN ---------------------------------------------------
