@@ -50,12 +50,13 @@
 # ------------------------------------------------------------------------------------
 
 #imports
-import matplotlib
-matplotlib.use('TkAgg')
+import matplotlib as mpl
+mpl.use('TkAgg')
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 # implement the default mpl key bindings
 from matplotlib.backend_bases import key_press_handler
 import matplotlib.pyplot as plt
+import matplotlib.animation as mplAnimat
 
 from pprint import pprint
 import tkinter as tk
@@ -429,35 +430,13 @@ class PySysMonitor_gui(tk.Frame):
         #  There is a CANCEL button at the bottom.
         #----------------------------------------------------------------------------
         procPropWind = tk.Toplevel()
-        procPropWind.title('PySysMonitor - Process Properties')  # yep
-        # width,height, xPos, yPos = [450,150,150,120]
-        # procPropWind.geometry('%dx%d+%d+%d' % (width,height, xPos, yPos))
-
+        procPropWind.title('PySysMonitor - Process Properties')
         # ===============================================================================
-        #  Run terminal commands to get any unknown data
-        # ====
-        thisProcDict=[]
-        fixedList = ['SystemTime', 'UserTime', 'Priority', 'ActiveStatus', ]
-        #
-        # fixedList = ['pid', 'name', 'ppid', 'parentName', 'uid', 'user name', 'start time', 'args']
-
-        #process=Popen(['ps', '-p','10776','-o', 'pid,pcpu'], stdout=PIPE, stderr=PIPE)
-        # strWords='ppid,uid,user,start_time'
-        # for()
-        # process = Popen(['ps', '-p',pidStr,'-o','user='], stdout=PIPE, stderr=PIPE)
-        #
-        # stdout,_= process.communicate()
-        # strAsc = stdout.decode('ascii', 'ignore')
-        # print('time:', time.time())
-        # ===============================================================================
-
-        #pid,name,ppid,uid,user,start_time
-        #args
 
         #'parentName'
         listLabels=[]
         tk.Label(procPropWind, text='Fixed Properties').grid(row=0, column=1, columnspan=2)
-        fixedList=['pid', 'name', 'ppid', 'uid', 'user name', 'start time', 'args']
+        fixedList=['PID', 'Name', 'PPID', 'UID', 'User name', 'Start time', 'args']
         # fixedList = ['pid', 'name', 'uid', 'user']
         for i in range(0,len(fixedList)):
             tk.Label(procPropWind, text=fixedList[i]).grid(row=i+1, column=1,sticky='E')
@@ -467,7 +446,8 @@ class PySysMonitor_gui(tk.Frame):
             listLabels.append(aLabel)
 
         tk.Label(procPropWind, text='Variable Properties').grid(row=15, column=1,columnspan=2)
-        fixedList = ['SystemTime','UserTime','Priority','ActiveStatus', ]
+        fixedList = ['CPU Time','Priority','Active Status','Virtual Mem']
+        # 'UserTime',
         # fixedList = ['pid', 'name', 'uid', 'user']
         for i in range(0, len(fixedList)):
             tk.Label(procPropWind, text=fixedList[i]).grid(row=i+20, column=1,sticky='E')
@@ -477,15 +457,17 @@ class PySysMonitor_gui(tk.Frame):
             listLabels.append(aLabel)
 
 
-        listArgs=['pid','comm','ppid','uid','user','start_time','args',   'cputime','etime', 'priority']
+        listArgs=['pid','comm','ppid','uid','user','start_time','args',
+                  'cputime','s', 'pri','sz']
         listWords=[]
         for arg in listArgs:
             process = Popen(['ps', '-p', pidStr, '-o', arg+'='], stdout=PIPE, stderr=PIPE)
             stdout, _ = process.communicate()
             strAsc = stdout.decode('ascii', 'ignore')
             strAsc=strAsc.rstrip()
+            strAsc=re.sub("(.{48})", "\\1\n", strAsc, 0, re.DOTALL)
             listWords.append(strAsc)
-        print('')
+            print(arg,'  - ',strAsc)
         # ==  Set Labels to display info ========
         listLabels[0]['text'] =   listWords[0]
         listLabels[1]['text'] =   listWords[1]
@@ -495,13 +477,13 @@ class PySysMonitor_gui(tk.Frame):
         listLabels[5]['text'] =   listWords[5]
         listLabels[6]['text'] =   listWords[6]
         listLabels[7]['text'] =   listWords[7]
-        # listLabels[8] =   listWords[0]
-        # listLabels[9] =   listWords[0]
-        # listLabels[10] =   listWords[0]
-        # listLabels[11] =   listWords[0]
-        # listLabels[12] =   listWords[0]
-        # listLabels[13] =   listWords[0]
-        # listLabels[14] =   listWords[0]
+        listLabels[8]['text'] =   listWords[8]
+        listLabels[9]['text'] =   listWords[9]
+        listLabels[10]['text'] =  listWords[10]
+        # listLabels[11]['text'] =  listWords[11]
+        # listLabels[12]['text'] =  listWords[12]
+        # listLabels[13]['text'] =  listWords[13]
+        # listLabels[14] =          listWords[0]
 
 
 
@@ -511,6 +493,83 @@ class PySysMonitor_gui(tk.Frame):
         # ===============================================================================
         cancelBut = tk.Button(procPropWind, text='Cancel', command=lambda: procPropWind.destroy())
         cancelBut.grid(row=100, column=1, columnspan=2)
+
+        # region matplotlib          ------------------------------------
+
+        # container frame for all matplotGUI
+        matplotFrame = tk.Frame(procPropWind, relief='sunken', bg='blue')
+        matplotFrame.grid(row=1,column=3,rowspan=90,sticky='NSEW')
+
+        # Format plt-fig-axes layout
+        fig, ax = plt.subplots()
+        ax.set_title('CPU Usage')  # Title of Graph.  Centered.  Above Graph.
+        ax.set_ylabel('Percent')  # Title of Left   (Y)
+        ax.set_xlabel('Time(s)')
+        # -- done setting up plt-fig-ax layouts -
+        ax.set_autoscale_on(False)
+        ax.set_ybound(0, 100)
+        lablLis = []
+        for i in np.arange(0, self.timeTrackDurat + 1, 5):
+            lablLis.append(str(i))
+        lablLis.reverse()
+        ax.set_xticklabels(lablLis)
+        # --#--#
+        x_data = [0,1,2,3]+self.psCompleteDict[pidStr]['timelist']#[0, 1, 2, 3, 4, 5, 6]
+        y_data = [0,1,2,3]+self.psCompleteDict[pidStr]['cpu%list']#[0, 0, 0, 1, 2, 3, 4]
+        lnAnim, = ax.plot(x_data, y_data, 'ro-', animated=True)
+
+        # curTime = time.time()
+        # .set_xbound(curTime - self.timeTrackDurat, curTime + 1)
+
+        figCanvas = FigureCanvasTkAgg(fig, master=matplotFrame)
+        figCanvas.get_tk_widget().pack(side='top', fill='both', expand=1)
+
+        toolbar = NavigationToolbar2TkAgg(figCanvas, matplotFrame)
+        toolbar.update()
+        figCanvas._tkcanvas.pack(side='top', fill='both', expand=1)
+
+        def updateMethod(updateCounter):
+            print('-updateCount=', updateCounter)
+            curTime = time.time()
+            ax.set_xticks(np.arange(curTime - self.timeTrackDurat, curTime + 1, 5))
+            ax.set_xbound(curTime - self.timeTrackDurat, curTime + 1)
+            x_data=self.psCompleteDict[pidStr]['timelist']
+            y_data=self.psCompleteDict[pidStr]['cpu%list']
+            print(x_data,y_data)
+            lnAnim.set_data(x_data,y_data)
+            figCanvas.show()
+            return lnAnim,
+
+        ani = mpl.animation.FuncAnimation(fig, updateMethod,interval=1000,blit=True)
+        #--#--#
+        print('-after updatr set-',lnAnim)
+
+        # Embed the matplotlib gui in a tkFrame
+        figCanvas.show()
+
+        # def on_key_event(event):
+        #     print('you pressed %s' % event.key)
+        #     key_press_handler(event, figCanvas, toolbar)
+        #
+        # def object_pick_event(event):
+        #     aStr = event.artist.get_label()
+        #     splitStr = aStr.split('-')
+        #     if (len(splitStr[0]) > 1):
+        #         self.psCompleteDict[splitStr[0]]['tracked'] = 'notTracked'
+        #         event.artist.set_visible(False)
+        #     print(splitStr)
+        #     # self.psCompleteDict[]
+        #     # event.artist.get_label
+        #     # if object picked is legend line
+        #
+        #     # if object picked is drawn line
+        #     print(event.artist.get_label())
+        #     pass
+        # figCanvas.mpl_connect('pick_event', object_pick_event)
+        # figCanvas.mpl_connect('key_press_event', on_key_event)
+
+        # make any variables class values if needed
+        # endregion matplotlib         --------------------------------------
         #end single_proc_prop
 
     def selectedProcBox(self, parent):
@@ -527,8 +586,8 @@ class PySysMonitor_gui(tk.Frame):
         # aLabel2 = tk.Label(listscrolFrame)
         # aLabel2.pack(side=tk.BOTTOM, fill=tk.X)
 
-        togVisibBut = tk.Button(listscrolFrame, text='Toggle Visible')
-        togVisibBut.pack(side=tk.BOTTOM, fill=tk.X)
+        # togVisibBut = tk.Button(listscrolFrame, text='Toggle Visible')
+        # togVisibBut.pack(side=tk.BOTTOM, fill=tk.X)
 
         remTrakBut = tk.Button(listscrolFrame, text='Remove Track')
         remTrakBut.pack(side=tk.BOTTOM, fill=tk.X)
@@ -588,7 +647,7 @@ class PySysMonitor_gui(tk.Frame):
                 self.open_singleProcProp(curVal)
 
 
-        togVisibBut['command'] = togVis
+        # togVisibBut['command'] = togVis
         remTrakBut['command'] =  remove
         self.lbSelected.bind("<Double-Button-1>", doubClikLsbx)
         self.lbSelected.bind("<ButtonRelease-1>", singClikLsbx)
@@ -862,7 +921,7 @@ class PySysMonitor_gui(tk.Frame):
                 self.pidDict[  str(wordList[0])  ]  =  floatList  #((wordList[0:4]),(commStrJoin))
 
                 #for first runs of periodicUpdateProcIDList save the top 10.
-                if self.firstRun and i<11:
+                if self.firstRun and i<6:
                     self.psCompleteDict[keyPIDcomm]['tracked']='tracked'
                     self.lbSelected.insert(tk.END,wordList[0])
 
@@ -951,22 +1010,11 @@ class PySysMonitor_gui(tk.Frame):
         fig,(axCPU,axMem) = plt.subplots(2, sharex='all', sharey='all')#3,sharex='col',sharey='row'
         #axArr=(axCPU,axMem) #column
 
-        plt.subplots_adjust(left=0.07, bottom=0.15, right=0.98, top=0.88, wspace=None, hspace=None)
-
-
+        plt.subplots_adjust(left=0.07, bottom=0.10, right=0.98, top=0.92, wspace=None, hspace=0.24)
 
         # -- done setting up plt-fig-ax layouts --
 
-        # x=np.arange(0,6.74,0.01)                         # X range.  (From (Starting At), To(ending at), By Increment size)
-        #
-        #                                                  # Python Note:   X is ALWAYS the first item set.
-        # t = np.arange(0.0, 3.0, 0.01)                    # First Item  (X)  Go from 0.0 to 3.0 by size 0.1
-        # s = np.sin(2 * np.pi * t)                        # Second Item (Y)  What to plot
-        # axCPU.plot(t, s)                                    # Plot the X (t)  and Y (s) values
-
-
         # Embed the matplotlib gui in a tkFrame
-        # a tk.DrawingArea
         self.canvas = FigureCanvasTkAgg(fig, master=matplotFrame)
         self.canvas.show()
         self.canvas.get_tk_widget().pack(side='top', fill='both', expand=1)
@@ -982,8 +1030,9 @@ class PySysMonitor_gui(tk.Frame):
             aStr=event.artist.get_label()
             splitStr = aStr.split('-')
             if(len(splitStr[0])>1):
-                self.psCompleteDict[splitStr[0]]['tracked']='notTracked'
-                event.artist.set_visible(False)
+                self.open_singleProcProp(splitStr[0])
+                # self.psCompleteDict[splitStr[0]]['tracked']='notTracked'
+                # event.artist.set_visible(False)
             print(splitStr)
             # self.psCompleteDict[]
             #event.artist.get_label
@@ -1039,6 +1088,7 @@ class PySysMonitor_gui(tk.Frame):
         for key in self.psCompleteDict.keys():
             if self.psCompleteDict[key]['tracked']=='tracked':
                 linelabel = self.psCompleteDict[key]['pid'] + '-' + self.psCompleteDict[key]['name']
+
                 # i=0
                 # for aLine in self.axCPU.get_lines():
                 #     if linelabel == aLine.get_label():
@@ -1054,14 +1104,12 @@ class PySysMonitor_gui(tk.Frame):
                 yMemPer = self.psCompleteDict[key]['mem%list']
 
 
-                self.axCPU.plot(xTime,yCpuPer,'-o',label=linelabel,picker='5')
-                self.axMem.plot(xTime, yMemPer,'-o', label=linelabel)
+                aline, = self.axCPU.plot(xTime,yCpuPer,'-o',label=linelabel,picker='5')
+                self.axMem.plot(xTime, yMemPer,'-o', label=linelabel,color=aline.get_color())
 
 
         handles, labels = self.axCPU.get_legend_handles_labels()
 
-
-        print('')
         for aHandle in handles:
             aColor=aHandle.get_color()
 
@@ -1069,10 +1117,10 @@ class PySysMonitor_gui(tk.Frame):
             intPid = int(re.search(r'\d+', aLabel).group())
 
             index = self.lbSelected.get(0, "end").index(str(intPid))
-            hexVal=matplotlib.colors.to_hex(aColor)
+            hexVal=mpl.colors.to_hex(aColor)
             self.lbSelected.itemconfig(index,background=hexVal)
 
-        self.axCPU.legend(handles, labels)
+        # self.axCPU.legend(handles, labels)
         self.canvas.show()
 
 
